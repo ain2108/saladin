@@ -18,10 +18,8 @@ defmodule Saladin.Module do
       end
 
       defp reset_sequence(state) do
-        IO.puts("reset_sequence")
         reset(state)
         wait(state)
-        IO.puts("received first clock pulse")
         run(state)
       end
 
@@ -32,8 +30,8 @@ defmodule Saladin.Module do
         send(clock_pid, {:ready, self()})
 
         receive do
-          {:tiktok} -> IO.puts("tiktok")
-          {:reset_sequence} -> reset_sequence(state)
+          {:tiktok} -> {:ok}
+          {:reset} -> reset_sequence(state)
         after
           timeout ->
             Process.exit(self(), "no clock signal has been received")
