@@ -12,23 +12,20 @@ defmodule Saladin.Module.BasicTest do
   end
 
   test "module sends :ready after reset" do
-    clock_pid = self()
-    {:ok, pid} = BasicTestModule.start_link(%{:clock => clock_pid})
+    {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
     assert_receive {:ready, mod_pid}, 5_000
     assert pid == mod_pid
   end
 
   test "module progresses after receiving :tiktok" do
-    clock_pid = self()
-    {:ok, pid} = BasicTestModule.start_link(%{:clock => clock_pid})
+    {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
     assert_receive {:ready, mod_pid}, 5_000
     send(pid, {:tiktok})
     assert_receive {:ready, mod_pid}, 5_000
   end
 
   test "module progresses in a loop" do
-    clock_pid = self()
-    {:ok, pid} = BasicTestModule.start_link(%{:clock => clock_pid})
+    {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
     assert_receive {:ready, mod_pid}, 5_000
     send(pid, {:tiktok})
     assert_receive {:ready, mod_pid}, 5_000

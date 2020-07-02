@@ -1,4 +1,25 @@
 defmodule Saladin.Module do
+
+  @moduledoc """
+  Saladin.Module models the behaviour of a synchronous RTL module. User can override the
+  run/1 function and the reset/1, both accepting a state map. The state map should at a minimum
+  contain state[:ports][:clock], the pid of a Saladin.Clock process. The user of the module gets the
+  access to a wait/1 which models a wait for the next rising edge of the clock.
+
+  ## Example
+
+    iex> defmodule BasicModule do
+    ...>  use Saladin.Module
+    ...>  def run(state) do
+    ...>   wait(state)
+    ...>   run(state)
+    ...>  end
+    ...> end
+    iex> {:ok, _} = BasicModule.start_link(%{:clock => self()})
+    iex> :ok
+    :ok
+
+  """
   @callback reset(Map.t()) :: {:ok, term} | {:error, String.t()}
   @callback run(Map.t()) :: any
 
