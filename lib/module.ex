@@ -1,5 +1,4 @@
 defmodule Saladin.Module do
-
   @moduledoc """
   Saladin.Module models the behaviour of a synchronous RTL module. User can override the
   run/1 function and the reset/1, both accepting a state map. The state map should at a minimum
