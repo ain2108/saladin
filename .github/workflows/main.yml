@@ -1,8 +1,8 @@
-name: Merge Checks
+name: Merge Actions
 on: push
 
 jobs:
-    format:
+    check:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout Code
