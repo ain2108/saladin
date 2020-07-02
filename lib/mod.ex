@@ -1,18 +1,18 @@
-defmodule Mod do
+defmodule Saladin.Module do
   @spec start_link(any) :: {:ok, pid}
   def start_link(ports) do
     # Want to make sure our simulation crashes in case a process crashes
     Task.start_link(fn -> reset(%{:ports => ports}) end)
   end
 
-  defp reset(state) do
+  defp reset state do
     IO.puts("reset")
     wait(state)
     IO.puts("received first clock pulse")
     loop(state)
   end
 
-  defp wait(state, timeout \\ 10_000) do
+  defp wait state, timeout \\ 10_000 do
     clock_pid = state[:ports][:clock]
 
     # Tell the clock you are ready for the next cycle
