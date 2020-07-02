@@ -1,5 +1,4 @@
 defmodule Mod do
-
   @spec start_link(any) :: {:ok, pid}
   def start_link(ports) do
     # Want to make sure our simulation crashes in case a process crashes
@@ -14,11 +13,10 @@ defmodule Mod do
   end
 
   defp wait(state, timeout \\ 10_000) do
-
     clock_pid = state[:ports][:clock]
 
     # Tell the clock you are ready for the next cycle
-    send clock_pid, {:ready, self()}
+    send(clock_pid, {:ready, self()})
 
     receive do
       {:tiktok} -> IO.puts("tiktok")
@@ -27,11 +25,9 @@ defmodule Mod do
       timeout ->
         Process.exit(self(), "no clock signal has been received")
     end
-
   end
 
   defp loop(state) do
-
     # Main compute loop
 
     # Block on
@@ -47,5 +43,4 @@ defmodule Mod do
     # Get back into the loop
     loop(state)
   end
-
 end
