@@ -34,7 +34,19 @@ defmodule Saladin.Module do
 
       def start_link(ports) do
         # Want to make sure our simulation crashes in case a process crashes
-        Task.start_link(fn -> reset_sequence(%{:ports => ports}) end)
+        Task.start_link(fn -> init(%{:ports => ports}) end)
+      end
+
+      defp init(state) do
+        # Register with the clock
+        clock_pid = state[:ports][:clock]
+        send(clock_pid, {:register, self()})
+
+        receive do
+          {:registration_ok} -> :ok
+        end
+
+        reset_sequence(state)
       end
 
       defp reset_sequence(state) do
