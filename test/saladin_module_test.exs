@@ -24,7 +24,7 @@ defmodule Saladin.Module.BasicTest do
     assert pid == mod_pid
   end
 
-  test "module progresses after receiving :tiktok" do
+  test "module progresses after receiving :tick" do
     {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
     send(pid, {:registration_ok})
     assert_receive {:ready, mod_pid}, 5_000
