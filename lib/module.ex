@@ -50,7 +50,7 @@ defmodule Saladin.Module do
         send(clock_pid, {:ready, self()})
 
         receive do
-          {:tiktok} -> {:ok}
+          {:tick} -> {:ok}
           {:reset} -> reset_sequence(state)
         after
           timeout ->

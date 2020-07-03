@@ -20,18 +20,18 @@ defmodule Saladin.Module.BasicTest do
   test "module progresses after receiving :tiktok" do
     {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
     assert_receive {:ready, mod_pid}, 5_000
-    send(pid, {:tiktok})
+    send(pid, {:tick})
     assert_receive {:ready, mod_pid}, 5_000
   end
 
   test "module progresses in a loop" do
     {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
     assert_receive {:ready, mod_pid}, 5_000
-    send(pid, {:tiktok})
+    send(pid, {:tick})
     assert_receive {:ready, mod_pid}, 5_000
-    send(pid, {:tiktok})
+    send(pid, {:tick})
     assert_receive {:ready, mod_pid}, 5_000
-    send(pid, {:tiktok})
+    send(pid, {:tick})
     assert_receive {:ready, mod_pid}, 5_000
   end
 end
