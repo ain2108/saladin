@@ -80,7 +80,7 @@ defmodule Saladin.Clock.ModuleIntegrationTest do
     assert tick_count > 1000
   end
 
-  @tag timeout: 2000000
+  @tag timeout: 2_000_000
   test "clock works with 50 modules and 10_000 ticks" do
     nmodules = 50
     nticks = 10_000

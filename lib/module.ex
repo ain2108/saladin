@@ -55,19 +55,33 @@ defmodule Saladin.Module do
         run(state)
       end
 
-      defp wait(state, timeout \\ 10_000) do
-        clock_pid = state[:clock]
-
-        # Tell the clock you are ready for the next cycle
-        send(clock_pid, {:ready, self()})
-
+      defp report_state(state) do
+        # Check inbox for :state msgs and drain it
         receive do
-          {:tick} -> {:ok}
+          {:state, pid} ->
+            send(pid, {:state, state})
+            report_state(state)
+        after
+          0 -> :ok
+        end
+      end
+
+      defp check_reset(state) do
+        receive do
           {:reset} -> reset_sequence(state)
         after
-          timeout ->
-            Process.exit(self(), "no clock signal has been received")
+          0 -> :ok
         end
+      end
+
+      defp wait(state, timeout \\ 10_000) do
+        # Check if anyone wants to see the state
+        report_state(state)
+
+        # Check if we received a reset signal
+        check_reset(state)
+
+        Saladin.Clock.tick(state.clock, timeout)
       end
 
       # Defoverridable makes the given functions in the current module overridable
