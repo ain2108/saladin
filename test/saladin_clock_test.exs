@@ -11,8 +11,7 @@ defmodule Saladin.Clock.BasicTest do
   test "clock module returns state when asked" do
     {:ok, pid} = Saladin.Clock.start_link(%{})
     send(pid, {:register, self()})
-    send(pid, {:state, self()})
-    assert_receive {:state, state}, 500
+    state = Saladin.Utils.get_state(pid)
     %{modules: modules, running: running} = state
     assert running == false
     assert MapSet.member?(modules, self())
@@ -22,14 +21,12 @@ defmodule Saladin.Clock.BasicTest do
     {:ok, pid} = Saladin.Clock.start_link(%{})
 
     send(pid, {:start})
-    send(pid, {:state, self()})
-    assert_receive {:state, state}, 500
+    state = Saladin.Utils.get_state(pid)
     %{modules: _, running: running} = state
     assert running == true
 
     send(pid, {:stop})
-    send(pid, {:state, self()})
-    assert_receive {:state, state}, 500
+    state = Saladin.Utils.get_state(pid)
     %{modules: _, running: running} = state
     assert running == false
   end
@@ -56,39 +53,16 @@ defmodule Saladin.Clock.ModuleIntegrationTest do
     end
   end
 
-  # Blocks infinitely if registatrion never occurs
-  def wait_for_state(clock_pid, conditional, backoff \\ 10) do
-    send(clock_pid, {:state, self()})
-
-    state =
-      receive do
-        {:state, state} -> state
-      end
-
-    unless conditional.(state) do
-      Process.sleep(backoff)
-      wait_for_state(clock_pid, conditional)
-    end
-  end
-
-  def get_state(pid) do
-    send(pid, {:state, self()})
-
-    receive do
-      {:state, state} -> state
-    end
-  end
-
   test "module registers with the clock correctly" do
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
     {:ok, module_pid} = BasicTestModule.start_link(%{clock: clock_pid})
-    wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
+    Saladin.Utils.wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
   end
 
   test "clock sends ticks to the module" do
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
     {:ok, module_pid} = BasicTestModule.start_link(%{clock: clock_pid, hello: self()})
-    wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
+    Saladin.Utils.wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
     Saladin.Clock.start_clock(clock_pid)
     assert_receive {:hello}
   end
@@ -96,33 +70,35 @@ defmodule Saladin.Clock.ModuleIntegrationTest do
   test "clock ticks the module 1000 times" do
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
     {:ok, module_pid} = BasicTestModule.start_link(%{clock: clock_pid, hello: self()})
-    wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
+    Saladin.Utils.wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
     Saladin.Clock.start_clock(clock_pid)
     for _ <- 0..1000, do: assert_receive({:hello})
     Saladin.Clock.stop_clock(clock_pid)
 
-    %{tick_count: tick_count} = get_state(clock_pid)
+    %{tick_count: tick_count} = Saladin.Utils.get_state(clock_pid)
     # could be few counts above due
     assert tick_count > 1000
   end
 
-  test "clock works with N modules" do
+  test "clock works with 50 modules and 10_000 ticks" do
     nmodules = 50
-    nticks = 10000
+    nticks = 10_000
 
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
 
     for _ <- 1..nmodules, do: BasicTestModule.start_link(%{clock: clock_pid, hello: self()})
 
     # Wait for all to be registeres
-    wait_for_state(clock_pid, fn state -> MapSet.size(state[:modules]) == nmodules end)
+    Saladin.Utils.wait_for_state(clock_pid, fn state ->
+      MapSet.size(state[:modules]) == nmodules
+    end)
 
     Saladin.Clock.start_clock(clock_pid)
     for _ <- 1..(nmodules * nticks), do: assert_receive({:hello})
     Saladin.Clock.stop_clock(clock_pid)
 
-    %{tick_count: tick_count} = get_state(clock_pid)
+    %{tick_count: tick_count} = Saladin.Utils.get_state(clock_pid)
     # could be few counts above due
-    assert tick_count > nticks
+    assert tick_count >= nticks
   end
 end
