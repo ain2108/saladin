@@ -10,12 +10,8 @@ defmodule Saladin.Utils do
 
   @spec wait_for_state(atom | pid | port | {atom, atom}, (any -> any), any) :: nil
   def wait_for_state(clock_pid, conditional, backoff \\ 10) do
-    send(clock_pid, {:state, self()})
 
-    state =
-      receive do
-        {:state, state} -> state
-      end
+    state = get_state(clock_pid)
 
     unless conditional.(state) do
       Process.sleep(backoff)

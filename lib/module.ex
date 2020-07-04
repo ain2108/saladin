@@ -29,7 +29,7 @@ defmodule Saladin.Module do
       @behaviour Saladin.Module
 
       # Define implementation for user modules to use
-      def reset(state), do: {:ok, "default_reset"}
+      def reset(state), do: state
       def run(state), do: {:error, "not implemented"}
 
       def start_link(state) do
@@ -50,7 +50,7 @@ defmodule Saladin.Module do
       end
 
       defp reset_sequence(state) do
-        reset(state)
+        state = reset(state)
         wait(state)
         run(state)
       end
