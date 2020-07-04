@@ -2,7 +2,7 @@ defmodule Saladin.Module do
   @moduledoc """
   Saladin.Module models the behaviour of a synchronous RTL module. User can override the
   run/1 function and the reset/1, both accepting a state map. The state map should at a minimum
-  contain state[:ports][:clock], the pid of a Saladin.Clock process. The user of the module gets the
+  contain state[:clock], the pid of a Saladin.Clock process. The user of the module gets the
   access to a wait/1 which models a wait for the next rising edge of the clock.
 
   ## Example
@@ -32,14 +32,14 @@ defmodule Saladin.Module do
       def reset(state), do: {:ok, "default_reset"}
       def run(state), do: {:error, "not implemented"}
 
-      def start_link(ports) do
+      def start_link(state) do
         # Want to make sure our simulation crashes in case a process crashes
-        Task.start_link(fn -> init(%{:ports => ports}) end)
+        Task.start_link(fn -> init(state) end)
       end
 
       defp init(state) do
         # Register with the clock
-        clock_pid = state[:ports][:clock]
+        clock_pid = state[:clock]
         send(clock_pid, {:register, self()})
 
         receive do
@@ -56,7 +56,7 @@ defmodule Saladin.Module do
       end
 
       defp wait(state, timeout \\ 10_000) do
-        clock_pid = state[:ports][:clock]
+        clock_pid = state[:clock]
 
         # Tell the clock you are ready for the next cycle
         send(clock_pid, {:ready, self()})
