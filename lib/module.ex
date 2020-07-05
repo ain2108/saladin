@@ -19,8 +19,8 @@ defmodule Saladin.Module do
     :ok
 
   """
-  @callback reset(Map.t()) :: {:ok, term} | {:error, String.t()}
-  @callback run(Map.t()) :: any
+  @callback reset(Map.t()) :: Map.t()
+  @callback run(Map.t()) :: no_return
 
   # When you call use in your module, the __using__ macro is called.
   defmacro __using__(_params) do
@@ -30,7 +30,11 @@ defmodule Saladin.Module do
 
       # Define implementation for user modules to use
       def reset(state), do: state
-      def run(state), do: {:error, "not implemented"}
+
+      def run(state) do
+        state = wait(state)
+        run(state)
+      end
 
       def start_link(state) do
         # Want to make sure our simulation crashes in case a process crashes
@@ -46,12 +50,12 @@ defmodule Saladin.Module do
           {:registration_ok} -> :ok
         end
 
-        reset_sequence(state)
+        reset_sequence(state |> Map.put(:tick_number, 0))
       end
 
       defp reset_sequence(state) do
         state = reset(state)
-        wait(state)
+        state = wait(state)
         run(state)
       end
 
@@ -81,7 +85,8 @@ defmodule Saladin.Module do
         # Check if we received a reset signal
         check_reset(state)
 
-        Saladin.Clock.tick(state.clock, timeout)
+        {:ok, tick_number} = Saladin.Clock.tick(state.clock, timeout)
+        %{state | tick_number: tick_number}
       end
 
       # Defoverridable makes the given functions in the current module overridable

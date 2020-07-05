@@ -6,7 +6,7 @@ defmodule Saladin.Module.BasicTest do
     use Saladin.Module
 
     def run(state) do
-      wait(state)
+      state = wait(state)
       run(state)
     end
   end
@@ -28,7 +28,7 @@ defmodule Saladin.Module.BasicTest do
     {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
     send(pid, {:registration_ok})
     assert_receive {:ready, mod_pid}, 5_000
-    send(pid, {:tick})
+    send(pid, {:tick, 0})
     assert_receive {:ready, mod_pid}, 5_000
   end
 
@@ -36,11 +36,11 @@ defmodule Saladin.Module.BasicTest do
     {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
     send(pid, {:registration_ok})
     assert_receive {:ready, mod_pid}, 5_000
-    send(pid, {:tick})
+    send(pid, {:tick, 0})
     assert_receive {:ready, mod_pid}, 5_000
-    send(pid, {:tick})
+    send(pid, {:tick, 1})
     assert_receive {:ready, mod_pid}, 5_000
-    send(pid, {:tick})
+    send(pid, {:tick, 2})
     assert_receive {:ready, mod_pid}, 5_000
   end
 
@@ -54,7 +54,7 @@ defmodule Saladin.Module.BasicTest do
     end
 
     def run(state) do
-      wait(state)
+      state = wait(state)
       run(state)
     end
   end
@@ -77,7 +77,7 @@ defmodule Saladin.Module.BasicTest do
 
     # Send the next reset to be executed on the next clock cycle
     send(pid, {:reset})
-    send(pid, {:tick})
+    send(pid, {:tick, 0})
 
     assert_receive {:reset_done, mod_pid, state}, 5_000
   end

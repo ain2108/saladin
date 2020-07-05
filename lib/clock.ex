@@ -44,7 +44,7 @@ defmodule Saladin.Clock do
       %{modules: modules, ready_count: ready_count, running: running} when running == true ->
         # If we received all the ready signals, the ready_count should be equat to size of the modules
         if ready_count == MapSet.size(modules) do
-          Enum.each(modules, fn pid -> send(pid, {:tick}) end)
+          Enum.each(modules, fn pid -> send(pid, {:tick, state.tick_count}) end)
           %{state | ready_count: 0} |> Map.update!(:tick_count, &(&1 + 1))
         else
           state
@@ -91,7 +91,7 @@ defmodule Saladin.Clock do
     send(clock_pid, {:ready, self()})
 
     receive do
-      {:tick} -> {:ok}
+      {:tick, tick_number} -> {:ok, tick_number}
     after
       timeout ->
         Process.exit(self(), "no clock signal has been received")
