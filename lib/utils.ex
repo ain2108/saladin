@@ -17,4 +17,23 @@ defmodule Saladin.Utils do
       wait_for_state(clock_pid, conditional)
     end
   end
+
+  defp report_state(state) do
+    # Check inbox for :state msgs and drain it
+    receive do
+      {:state, pid} ->
+        send(pid, {:state, state})
+        report_state(state)
+    after
+      0 -> :ok
+    end
+  end
+
+  def wait(state, timeout \\ 10_000) do
+    # Check if anyone wants to see the state
+    report_state(state)
+
+    {:ok, tick_number} = Saladin.Clock.tick(state.clock, timeout)
+    %{state | tick_number: tick_number}
+  end
 end

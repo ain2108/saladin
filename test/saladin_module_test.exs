@@ -69,16 +69,4 @@ defmodule Saladin.Module.BasicTest do
 
     # %{test_value: value} = Saladin.Utils.get_state(pid) #TODO: Needs more thought
   end
-
-  test "module resets on :reset" do
-    {:ok, pid} = BasicTestModuleWithReset.start_link(%{:clock => self(), reset_serv: self()})
-    send(pid, {:registration_ok})
-    assert_receive {:reset_done, mod_pid, state}, 5_000
-
-    # Send the next reset to be executed on the next clock cycle
-    send(pid, {:reset})
-    send(pid, {:tick, 0})
-
-    assert_receive {:reset_done, mod_pid, state}, 5_000
-  end
 end

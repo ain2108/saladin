@@ -28,6 +28,8 @@ defmodule Saladin.Module do
       # User modules must implement the Saladin.Module callbacks
       @behaviour Saladin.Module
 
+      import Saladin.Utils, only: [wait: 1]
+
       # Define implementation for user modules to use
       def reset(state), do: state
 
@@ -57,36 +59,6 @@ defmodule Saladin.Module do
         state = reset(state)
         state = wait(state)
         run(state)
-      end
-
-      defp report_state(state) do
-        # Check inbox for :state msgs and drain it
-        receive do
-          {:state, pid} ->
-            send(pid, {:state, state})
-            report_state(state)
-        after
-          0 -> :ok
-        end
-      end
-
-      defp check_reset(state) do
-        receive do
-          {:reset} -> reset_sequence(state)
-        after
-          0 -> :ok
-        end
-      end
-
-      defp wait(state, timeout \\ 10_000) do
-        # Check if anyone wants to see the state
-        report_state(state)
-
-        # Check if we received a reset signal
-        check_reset(state)
-
-        {:ok, tick_number} = Saladin.Clock.tick(state.clock, timeout)
-        %{state | tick_number: tick_number}
       end
 
       # Defoverridable makes the given functions in the current module overridable

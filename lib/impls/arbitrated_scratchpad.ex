@@ -46,3 +46,11 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
     run(state)
   end
 end
+
+defmodule Saladin.Impls.ScratchpadConsumerInterface do
+  def write(pid, addr, value, state) do
+    # Send the request
+    send(pid, {:write, addr, value, self(), state.tick_number})
+    Saladin.Utils.wait(state)
+  end
+end

@@ -82,7 +82,7 @@ defmodule Saladin.Clock do
     loop(state)
   end
 
-  @spec tick(atom | pid | port | {atom, atom}, :infinity | non_neg_integer) :: true | {:ok}
+  @spec tick(atom | pid | port | {atom, atom}, :infinity | non_neg_integer) :: true | {:ok, any}
   @doc """
   Client function representing the tick of a clock. Implemented by sending :ready to the clock, and blocking
   until the :tick is received.
