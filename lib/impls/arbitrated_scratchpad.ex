@@ -27,6 +27,7 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
           # clock cycle to read from PLM
           state = wait(state)
           # IO.puts("read: to request register: #{addr}:#{value} at #{state.tick_number}")
+          # TODO: Might wanna send the state.tick_number + 1, i.e the tick when the value is actually available.
           send(pid, {:read_done, addr, value, state.tick_number})
           state
 
@@ -48,6 +49,16 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
 end
 
 defmodule Saladin.Impls.ScratchpadConsumerInterface do
+  @doc """
+  Write to req_register             (0)
+  -> drive PLM ports                (1)
+  -> writeback to response_register (2)
+  -> value available for use        (3)
+  """
+  @min_op_latency 3
+
+  def min_op_latency, do: @min_op_latency
+
   defp wait_write(pid, state) do
     tick_number = state.tick_number
 
