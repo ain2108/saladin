@@ -48,9 +48,45 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
 end
 
 defmodule Saladin.Impls.ScratchpadConsumerInterface do
+  defp wait_write(pid, state) do
+    tick_number = state.tick_number
+
+    receive do
+      {:write_done, addr, value, req_tick_number} when req_tick_number < tick_number ->
+        {state, {:write_done, addr, value, req_tick_number}}
+    after
+      0 ->
+        state = Saladin.Utils.wait(state)
+        wait_write(pid, state)
+    end
+  end
+
   def write(pid, addr, value, state) do
     # Send the request
     send(pid, {:write, addr, value, self(), state.tick_number})
-    Saladin.Utils.wait(state)
+    # Wait a clock cycle
+    state = Saladin.Utils.wait(state)
+    wait_write(pid, state)
+  end
+
+  defp wait_read(pid, state) do
+    tick_number = state.tick_number
+
+    receive do
+      {:read_done, addr, value, req_tick_number} when req_tick_number < tick_number ->
+        {state, {:read_done, addr, value, req_tick_number}}
+    after
+      0 ->
+        state = Saladin.Utils.wait(state)
+        wait_read(pid, state)
+    end
+  end
+
+  def read(pid, addr, state) do
+    # Send the request
+    send(pid, {:read, addr, self(), state.tick_number})
+    # Wait a clock cycle
+    state = Saladin.Utils.wait(state)
+    wait_read(pid, state)
   end
 end
