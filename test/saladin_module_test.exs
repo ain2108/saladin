@@ -70,3 +70,28 @@ defmodule Saladin.Module.BasicTest do
     # %{test_value: value} = Saladin.Utils.get_state(pid) #TODO: Needs more thought
   end
 end
+
+defmodule Saladin.Module.Input.BasicTest do
+  use ExUnit.Case
+  doctest Saladin.Module.Input
+
+  test "test basic behaviour of the port" do
+    {:ok, pid} = Saladin.Module.Input.start_link([])
+    total_writes = 5
+
+    for i <- 0..total_writes do
+      Saladin.Module.Input.write(pid, {:some, i})
+    end
+
+    res = Saladin.Module.Input.read_all(pid)
+
+    inspect(res)
+
+    assert length(res) == total_writes + 1
+
+    res
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.each(fn {msg, i} -> assert msg == {:some, i} end)
+  end
+end

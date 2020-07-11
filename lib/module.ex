@@ -67,3 +67,38 @@ defmodule Saladin.Module do
     end
   end
 end
+
+defmodule Saladin.Module.Input do
+  use GenServer
+
+  # Interface
+
+  def start_link(default) when is_list(default) do
+    GenServer.start_link(__MODULE__, default)
+  end
+
+  def write(pid, msg) do
+    GenServer.call(pid, {:write, msg})
+  end
+
+  def read_all(pid) do
+    GenServer.call(pid, :read_all)
+  end
+
+  # Server (callbacks)
+
+  @impl true
+  def init(state) do
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_call(:read_all, _from, state) do
+    {:reply, state, []}
+  end
+
+  @impl true
+  def handle_call({:write, msg}, _from, state) do
+    {:reply, :ok, [msg | state]}
+  end
+end
