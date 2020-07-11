@@ -29,11 +29,28 @@ defmodule Saladin.Utils do
     end
   end
 
+  defp drain_input(input) do
+    input_msgs = Saladin.Module.Input.read_all(input)
+
+    for msg <- input_msgs do
+      send(self(), msg)
+    end
+
+    send(self(), :drain_done)
+
+    receive do
+      :drain_done -> :ok
+    end
+  end
+
   def wait(state, timeout \\ 10_000) do
     # Check if anyone wants to see the state
     report_state(state)
 
     {:ok, tick_number} = Saladin.Clock.tick(state.clock, timeout)
+
+    :ok = drain_input(state.input)
+
     %{state | tick_number: tick_number}
   end
 end

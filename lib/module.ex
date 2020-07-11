@@ -48,11 +48,13 @@ defmodule Saladin.Module do
         clock_pid = state[:clock]
         send(clock_pid, {:register, self()})
 
+        {:ok, input} = Saladin.Module.Input.start_link([])
+
         receive do
           {:registration_ok} -> :ok
         end
 
-        reset_sequence(state |> Map.put(:tick_number, 0))
+        reset_sequence(state |> Map.put(:tick_number, 0) |> Map.put(:input, input))
       end
 
       defp reset_sequence(state) do
