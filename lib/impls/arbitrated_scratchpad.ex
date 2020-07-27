@@ -1,6 +1,28 @@
 defmodule Saladin.Impls.ArbitratedScratchpad do
   use Saladin.Module
 
+  defp wait_consumer_registration(state, cur, num_consumers) do
+    # Register consumers
+    if cur < num_consumers do
+      receive do
+        {:register_consumer, consumer_pid, consumer_input} ->
+          send(consumer_pid, {:register_consumer_ok, state.input})
+
+          state
+          |> Map.put(cur, consumer_input)
+          |> wait_consumer_registration(cur + 1, num_consumers)
+      after
+        5_000 ->
+          Process.exit(
+            self(),
+            "Missing consumer registration. Make sure all scratchpad consumers send :register_consumer"
+          )
+      end
+    else
+      state
+    end
+  end
+
   def reset(state) do
     plm = :ets.new(:buckets_registry, [:set, :private])
 
@@ -8,12 +30,12 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
     for addr <- 0..(state.plm_config.nbanks * state.plm_config.bank_size - 1),
         do: :ets.insert(plm, {addr, 0})
 
-    state |> Map.put(:plm, plm)
+    # Wait for all consumers to register
+    wait_consumer_registration(state, 0, state.num_consumers) |> Map.put(:plm, plm)
   end
 
   def run(state) do
     # Check if there is a
-    # uncommenting this removes the dyalizer error
     tick_number = state.tick_number
 
     # IO.puts("#{tick_number}")
@@ -27,7 +49,6 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
           # clock cycle to read from PLM
           state = wait(state)
           # IO.puts("read: to request register: #{addr}:#{value} at #{state.tick_number}")
-          # TODO: Might wanna send the state.tick_number + 1, i.e the tick when the value is actually available.
           Saladin.Module.Input.drive(pid, {:read_done, addr, value, state.tick_number})
           state
 
@@ -99,5 +120,13 @@ defmodule Saladin.Impls.ScratchpadConsumerInterface do
     # Wait a clock cycle
     state = Saladin.Utils.wait(state)
     wait_read(pid, state)
+  end
+
+  def register_consumer(scratchpad_pid, state) do
+    send(scratchpad_pid, {:register_consumer, self(), state.input})
+
+    receive do
+      {:register_consumer_ok, scratchpad_input} -> scratchpad_input
+    end
   end
 end
