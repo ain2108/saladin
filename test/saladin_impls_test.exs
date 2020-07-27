@@ -1,39 +1,6 @@
 defmodule Saladin.Impls.ArbitratedScratchpadTest do
   use ExUnit.Case
 
-  test "basic scratchpad implementation test" do
-    # for registration
-    {:ok, clock_pid} = Saladin.Clock.start_link(%{})
-    plm_config = %{nbanks: 1, bank_size: 516}
-
-    {:ok, module_pid} =
-      Saladin.Impls.ArbitratedScratchpad.start_link(%{clock: clock_pid, plm_config: plm_config})
-
-    Saladin.Utils.wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
-
-    # wait() in reset, Scratchpad check #0, no work
-    send(module_pid, {:tick, 0})
-    # Scratchpad check #1, no work
-    send(module_pid, {:tick, 1})
-
-    send(module_pid, {:write, 17, 13, self(), 1})
-    # Scratchpad check #2, need to do write
-    send(module_pid, {:tick, 2})
-    # Scratchpad check #3, PLM write complete, send confirmation
-    send(module_pid, {:tick, 3})
-
-    send(module_pid, {:read, 17, self(), 3})
-    # to consumer only visible on cycle #4
-    assert_receive {:write_done, 17, 13, 3}
-
-    # Scratchpad check #4, need to do read
-    send(module_pid, {:tick, 4})
-    # Scratchpad check #5, PLM read and send back
-    send(module_pid, {:tick, 5})
-    # to consumer only visible on cycle #6
-    assert_receive {:read_done, 17, 13, 5}
-  end
-
   defmodule BasicConsumerModule do
     use Saladin.Module
 
@@ -42,6 +9,7 @@ defmodule Saladin.Impls.ArbitratedScratchpadTest do
       scratchpad_server = state.scratchpad_server
       req_start_tick_number = state.tick_number
 
+      # Be very careful with state, must keep passing it forward
       state =
         receive do
           {:test_read, addr} ->
@@ -73,24 +41,30 @@ defmodule Saladin.Impls.ArbitratedScratchpadTest do
     bank_size = 512
     max_value = 65536
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
+
+    # Initialize the ScratchPad
     plm_config = %{nbanks: 1, bank_size: 512}
 
-    {:ok, scratchpad_pid} =
+    {:ok, scratchpad_clock, scratchpad_input} =
       Saladin.Impls.ArbitratedScratchpad.start_link(%{clock: clock_pid, plm_config: plm_config})
 
-    {:ok, tester_pid} =
+    # Start the scratchpad consumer
+    {:ok, tester_pid, _} =
       BasicConsumerModule.start_link(%{
         clock: clock_pid,
-        scratchpad_server: scratchpad_pid,
+        # Notice how we pass the input pid as opposed to clock pid
+        scratchpad_server: scratchpad_input,
         test_server: self()
       })
 
     Saladin.Utils.wait_for_state(
       clock_pid,
-      &MapSet.equal?(&1[:modules], MapSet.new([tester_pid, scratchpad_pid]))
+      &MapSet.equal?(&1[:modules], MapSet.new([tester_pid, scratchpad_clock]))
     )
 
     Saladin.Clock.start_clock(clock_pid)
+
+    # assert false
 
     for test_addr <- 0..(bank_size - 1) do
       test_value = :rand.uniform(max_value)

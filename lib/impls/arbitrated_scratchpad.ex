@@ -28,7 +28,7 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
           state = wait(state)
           # IO.puts("read: to request register: #{addr}:#{value} at #{state.tick_number}")
           # TODO: Might wanna send the state.tick_number + 1, i.e the tick when the value is actually available.
-          send(pid, {:read_done, addr, value, state.tick_number})
+          Saladin.Module.Input.drive(pid, {:read_done, addr, value, state.tick_number})
           state
 
         {:write, addr, value, pid, req_tick_number} when req_tick_number < tick_number ->
@@ -36,8 +36,8 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
           :ets.insert(state.plm, {addr, value})
           state = wait(state)
 
-          # IO.puts("read: returning to request register: #{addr}:#{value} at #{state.tick_number}")
-          send(pid, {:write_done, addr, value, state.tick_number})
+          # IO.puts("write: returning to request register: #{addr}:#{value} at #{state.tick_number}")
+          Saladin.Module.Input.drive(pid, {:write_done, addr, value, state.tick_number})
           state
       after
         0 -> state
@@ -74,7 +74,7 @@ defmodule Saladin.Impls.ScratchpadConsumerInterface do
 
   def write(pid, addr, value, state) do
     # Send the request
-    send(pid, {:write, addr, value, self(), state.tick_number})
+    Saladin.Module.Input.drive(pid, {:write, addr, value, state.input, state.tick_number})
     # Wait a clock cycle
     state = Saladin.Utils.wait(state)
     wait_write(pid, state)
@@ -94,8 +94,8 @@ defmodule Saladin.Impls.ScratchpadConsumerInterface do
   end
 
   def read(pid, addr, state) do
-    # Send the request
-    send(pid, {:read, addr, self(), state.tick_number})
+    # Send the request, provide our own input port for response
+    Saladin.Module.Input.drive(pid, {:read, addr, state.input, state.tick_number})
     # Wait a clock cycle
     state = Saladin.Utils.wait(state)
     wait_read(pid, state)

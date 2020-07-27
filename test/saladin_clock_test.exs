@@ -55,13 +55,13 @@ defmodule Saladin.Clock.ModuleIntegrationTest do
 
   test "module registers with the clock correctly" do
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
-    {:ok, module_pid} = BasicTestModule.start_link(%{clock: clock_pid})
+    {:ok, module_pid, _} = BasicTestModule.start_link(%{clock: clock_pid})
     Saladin.Utils.wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
   end
 
   test "clock sends ticks to the module" do
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
-    {:ok, module_pid} = BasicTestModule.start_link(%{clock: clock_pid, hello: self()})
+    {:ok, module_pid, _} = BasicTestModule.start_link(%{clock: clock_pid, hello: self()})
     Saladin.Utils.wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
     Saladin.Clock.start_clock(clock_pid)
     assert_receive {:hello}
@@ -69,7 +69,7 @@ defmodule Saladin.Clock.ModuleIntegrationTest do
 
   test "clock ticks the module 1000 times" do
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
-    {:ok, module_pid} = BasicTestModule.start_link(%{clock: clock_pid, hello: self()})
+    {:ok, module_pid, _} = BasicTestModule.start_link(%{clock: clock_pid, hello: self()})
     Saladin.Utils.wait_for_state(clock_pid, &MapSet.member?(&1[:modules], module_pid))
     Saladin.Clock.start_clock(clock_pid)
     for _ <- 0..1000, do: assert_receive({:hello})

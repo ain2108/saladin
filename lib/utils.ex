@@ -30,14 +30,21 @@ defmodule Saladin.Utils do
   end
 
   defp drain_input(input) do
+    # The goal of the function is to drain the input queue, and send the messages in the input queue to self for processing.
+
+    # Read the input queue fully
     input_msgs = Saladin.Module.Input.read_all(input)
 
+    # For each msg in the input queue, send it to the main process
     for msg <- input_msgs do
       send(self(), msg)
     end
 
+    # After all messages are sent, send the :drain_done.
+    # Beam guarantees us order for messages sent between two processes.
     send(self(), :drain_done)
 
+    # Block until :drain_done message is recived, thus guaranteeing that the real messages are sitting in process queue.
     receive do
       :drain_done -> :ok
     end

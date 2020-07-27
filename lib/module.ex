@@ -14,7 +14,7 @@ defmodule Saladin.Module do
     ...>   run(state)
     ...>  end
     ...> end
-    iex> {:ok, _} = BasicModule.start_link(%{:clock => self()})
+    iex> {:ok, _, _} = BasicModule.start_link(%{:clock => self()})
     iex> :ok
     :ok
 
@@ -40,15 +40,24 @@ defmodule Saladin.Module do
 
       def start_link(state) do
         # Want to make sure our simulation crashes in case a process crashes
-        Task.start_link(fn -> init(state) end)
+        state = Map.put(state, :_parent, self())
+
+        {:ok, module_pid} = Task.start_link(fn -> init(state) end)
+
+        # Modules send init
+        receive do
+          {:module_started, input_pid} -> {:ok, module_pid, input_pid}
+        end
       end
 
       defp init(state) do
+        # Initialize input queue
+        {:ok, input} = Saladin.Module.Input.start_link([])
+        send(state[:_parent], {:module_started, input})
+
         # Register with the clock
         clock_pid = state[:clock]
         send(clock_pid, {:register, self()})
-
-        {:ok, input} = Saladin.Module.Input.start_link([])
 
         receive do
           {:registration_ok} -> :ok
@@ -79,7 +88,7 @@ defmodule Saladin.Module.Input do
     GenServer.start_link(__MODULE__, default)
   end
 
-  def write(pid, msg) do
+  def drive(pid, msg) do
     GenServer.call(pid, {:write, msg})
   end
 

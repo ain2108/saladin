@@ -12,28 +12,28 @@ defmodule Saladin.Module.BasicTest do
   end
 
   test "module attempts registration with clock" do
-    {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
+    {:ok, pid, _} = BasicTestModule.start_link(%{:clock => self()})
     assert_receive {:register, mod_pid}, 5_000
     assert pid == mod_pid
   end
 
   test "module sends :ready after reset" do
-    {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
+    {:ok, pid, _} = BasicTestModule.start_link(%{:clock => self()})
     send(pid, {:registration_ok})
     assert_receive {:ready, mod_pid}, 5_000
     assert pid == mod_pid
   end
 
   test "module progresses after receiving :tick" do
-    {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
+    {:ok, pid, _} = BasicTestModule.start_link(%{:clock => self()})
     send(pid, {:registration_ok})
     assert_receive {:ready, mod_pid}, 5_000
     send(pid, {:tick, 0})
     assert_receive {:ready, mod_pid}, 5_000
   end
 
-  test "module progresses in a loop" do
-    {:ok, pid} = BasicTestModule.start_link(%{:clock => self()})
+  test "module progresses for many ticks" do
+    {:ok, pid, _} = BasicTestModule.start_link(%{:clock => self()})
     send(pid, {:registration_ok})
     assert_receive {:ready, mod_pid}, 5_000
     send(pid, {:tick, 0})
@@ -60,7 +60,7 @@ defmodule Saladin.Module.BasicTest do
   end
 
   test "module with custom reset override" do
-    {:ok, pid} = BasicTestModuleWithReset.start_link(%{:clock => self(), reset_serv: self()})
+    {:ok, pid, _} = BasicTestModuleWithReset.start_link(%{:clock => self(), reset_serv: self()})
     send(pid, {:registration_ok})
     assert_receive {:reset_done, mod_pid, state}, 5_000
     %{test_value: test_value} = state
@@ -80,7 +80,7 @@ defmodule Saladin.Module.Input.BasicTest do
     total_writes = 5
 
     for i <- 0..total_writes do
-      Saladin.Module.Input.write(pid, {:some, i})
+      Saladin.Module.Input.drive(pid, {:some, i})
     end
 
     res = Saladin.Module.Input.read_all(pid)
