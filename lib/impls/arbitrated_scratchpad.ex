@@ -8,8 +8,8 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
         {:register_consumer, consumer_pid, consumer_input} ->
           send(consumer_pid, {:register_consumer_ok, state.input})
 
-          state
-          |> Map.put(cur, consumer_input)
+          # Add the consumer_pid to the array of consumers
+          Map.update!(state, :consumers, &(&1 |> Map.put(cur, consumer_input)))
           |> wait_consumer_registration(cur + 1, num_consumers)
       after
         5_000 ->
@@ -31,19 +31,20 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
         do: :ets.insert(plm, {addr, 0})
 
     # Wait for all consumers to register
-    wait_consumer_registration(state, 0, state.num_consumers) |> Map.put(:plm, plm)
+    state = state |> Map.put(:consumers, %{}) |> Map.put(:plm, plm) |> Map.put(:cur_consumer_i, 0)
+    wait_consumer_registration(state, 0, state.num_consumers)
   end
 
   def run(state) do
     # Check if there is a
     tick_number = state.tick_number
-
-    # IO.puts("#{tick_number}")
+    cur_consumer = state.consumers[state.cur_consumer_i]
 
     # We want to read the request sent on previous clock cycle
     state =
       receive do
-        {:read, addr, pid, req_tick_number} when req_tick_number < tick_number ->
+        {:read, addr, pid, req_tick_number}
+        when req_tick_number < tick_number and pid == cur_consumer ->
           [{_, value}] = :ets.lookup(state.plm, addr)
           # IO.puts("read: #{addr}:#{value} from #{req_tick_number} executed at #{tick_number}")
           # clock cycle to read from PLM
@@ -52,7 +53,8 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
           Saladin.Module.Input.drive(pid, {:read_done, addr, value, state.tick_number})
           state
 
-        {:write, addr, value, pid, req_tick_number} when req_tick_number < tick_number ->
+        {:write, addr, value, pid, req_tick_number}
+        when req_tick_number < tick_number and pid == cur_consumer ->
           # IO.puts("write: #{addr}:#{value} from #{req_tick_number} executed at #{tick_number}")
           :ets.insert(state.plm, {addr, value})
           state = wait(state)
@@ -64,8 +66,7 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
         0 -> state
       end
 
-    state = wait(state)
-    run(state)
+    state |> Map.update!(:cur_consumer_i, &rem(&1 + 1, state.num_consumers)) |> wait() |> run()
   end
 end
 

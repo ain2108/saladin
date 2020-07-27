@@ -8,13 +8,6 @@ defmodule Saladin.Impls.ArbitratedScratchpadTest do
       scratchpad_input =
         Saladin.Impls.ScratchpadConsumerInterface.register_consumer(state.scratchpad_pid, state)
 
-      IO.puts(
-        :standard_error,
-        "Consumer registered with Scratchpad pid:#{inspect(state.scratchpad_pid)} input:#{
-          inspect(scratchpad_input)
-        }"
-      )
-
       state |> Map.put(:scratchpad_input, scratchpad_input)
     end
 
