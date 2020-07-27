@@ -44,7 +44,7 @@ defmodule Saladin.Clock do
       %{modules: modules, ready_count: ready_count, running: running} when running == true ->
         # If we received all the ready signals, the ready_count should be equat to size of the modules
         if ready_count == MapSet.size(modules) do
-          Enum.each(modules, fn pid -> send(pid, {:tick}) end)
+          Enum.each(modules, fn pid -> send(pid, {:tick, state.tick_count}) end)
           %{state | ready_count: 0} |> Map.update!(:tick_count, &(&1 + 1))
         else
           state
@@ -80,5 +80,21 @@ defmodule Saladin.Clock do
     state = clock_tick(state)
 
     loop(state)
+  end
+
+  @spec tick(atom | pid | port | {atom, atom}, :infinity | non_neg_integer) :: true | {:ok, any}
+  @doc """
+  Client function representing the tick of a clock. Implemented by sending :ready to the clock, and blocking
+  until the :tick is received.
+  """
+  def tick(clock_pid, timeout) do
+    send(clock_pid, {:ready, self()})
+
+    receive do
+      {:tick, tick_number} -> {:ok, tick_number}
+    after
+      timeout ->
+        Process.exit(self(), "no clock signal has been received")
+    end
   end
 end
