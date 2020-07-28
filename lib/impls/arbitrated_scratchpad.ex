@@ -26,9 +26,16 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
   def reset(state) do
     plm = :ets.new(:buckets_registry, [:set, :private])
 
+    plm_init = Map.get(state.plm_config, :plm_init, [])
+
     # Initialize the PLM
     for addr <- 0..(state.plm_config.nbanks * state.plm_config.bank_size - 1),
         do: :ets.insert(plm, {addr, 0})
+
+    # Update PLM with init values
+    for addr_value <- plm_init do
+      :ets.insert(plm, addr_value)
+    end
 
     # Wait for all consumers to register
     state = state |> Map.put(:consumers, %{}) |> Map.put(:plm, plm) |> Map.put(:cur_consumer_i, 0)
@@ -43,14 +50,20 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
     # We want to read the request sent on previous clock cycle
     state =
       receive do
+        # Notice the strict <, req_tick_number is the cycle on which the consumer was driving register inputs
+        # req_tick_number + 1 is the earliest cycle when request register value is available to the arbitrator
         {:read, addr, pid, req_tick_number}
         when req_tick_number < tick_number and pid == cur_consumer ->
-          [{_, value}] = :ets.lookup(state.plm, addr)
-          # IO.puts("read: #{addr}:#{value} from #{req_tick_number} executed at #{tick_number}")
           # clock cycle to read from PLM
           state = wait(state)
-          # IO.puts("read: to request register: #{addr}:#{value} at #{state.tick_number}")
-          Saladin.Module.Input.drive(pid, {:read_done, addr, value, state.tick_number})
+          [{_, value}] = :ets.lookup(state.plm, addr)
+
+          # Produce the output, only should become visible to consumer next clock cycle
+          Saladin.Module.Input.drive(pid, {:read_done, addr, value, state.tick_number + 1})
+          # clock cycle spent writing into output register
+          state = wait(state)
+
+          # Output signal driven by the output register
           state
 
         {:write, addr, value, pid, req_tick_number}
@@ -59,14 +72,19 @@ defmodule Saladin.Impls.ArbitratedScratchpad do
           :ets.insert(state.plm, {addr, value})
           state = wait(state)
 
+          # Produce the output, only should become visible to consumer next clock cycle
+          Saladin.Module.Input.drive(pid, {:write_done, addr, value, state.tick_number + 1})
+          # clock cycle spent writing into output register
+          state = wait(state)
+
           # IO.puts("write: returning to request register: #{addr}:#{value} at #{state.tick_number}")
-          Saladin.Module.Input.drive(pid, {:write_done, addr, value, state.tick_number})
           state
       after
-        0 -> state
+        # If no valid request, need to wait a clock cycle anyways
+        0 -> wait(state)
       end
 
-    state |> Map.update!(:cur_consumer_i, &rem(&1 + 1, state.num_consumers)) |> wait() |> run()
+    state |> Map.update!(:cur_consumer_i, &rem(&1 + 1, state.num_consumers)) |> run()
   end
 end
 
@@ -85,7 +103,7 @@ defmodule Saladin.Impls.ScratchpadConsumerInterface do
     tick_number = state.tick_number
 
     receive do
-      {:write_done, addr, value, req_tick_number} when req_tick_number < tick_number ->
+      {:write_done, addr, value, req_tick_number} when req_tick_number <= tick_number ->
         {state, {:write_done, addr, value, req_tick_number}}
     after
       0 ->
@@ -106,7 +124,7 @@ defmodule Saladin.Impls.ScratchpadConsumerInterface do
     tick_number = state.tick_number
 
     receive do
-      {:read_done, addr, value, req_tick_number} when req_tick_number < tick_number ->
+      {:read_done, addr, value, req_tick_number} when req_tick_number <= tick_number ->
         {state, {:read_done, addr, value, req_tick_number}}
     after
       0 ->
