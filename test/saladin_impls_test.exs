@@ -100,74 +100,76 @@ defmodule Saladin.SimpleArbiterRRTest do
   end
 end
 
-defmodule Saladin.Impls.Simulate do
+defmodule BasicConsumerModule do
+  use Saladin.Module
   use ExUnit.Case
 
-  defmodule BasicConsumerModule do
-    use Saladin.Module
+  def reset(state) do
+    scratchpad_input = Saladin.ArbiterInterface.register_consumer(state.scratchpad_pid, state)
 
-    def reset(state) do
-      scratchpad_input = Saladin.ArbiterInterface.register_consumer(state.scratchpad_pid, state)
-
-      state
-      |> Map.put(:scratchpad_input, scratchpad_input)
-      |> Map.put(:cur_addr, state.consumer_id)
-    end
-
-    defp do_work(state, cur_work_cycle, total_work_cycles)
-         when cur_work_cycle >= total_work_cycles do
-      state
-    end
-
-    defp do_work(state, cur_work_cycle, total_work_cycles)
-         when cur_work_cycle < total_work_cycles do
-      state = wait(state)
-      do_work(state, cur_work_cycle + 1, total_work_cycles)
-    end
-
-    defp spin(state) do
-      wait(state) |> spin()
-    end
-
-    def run(state) do
-      tester_pid = state.tester_pid
-      scratchpad_input = state.scratchpad_input
-      addr = state.cur_addr
-      total_consumers = state.total_consumers
-      work_cycles = state.work_cycles
-
-      # Read the value
-      read_start_tick = state.tick_number
-      {state, _} = Saladin.ArbiterInterface.read(scratchpad_input, addr, state)
-
-      assert state.tick_number >=
-               read_start_tick + Saladin.ArbiterInterface.min_op_latency()
-
-      # Simulate work for # work cycles
-      work_start_tick = state.tick_number
-      state = do_work(state, 0, work_cycles)
-      assert state.tick_number == work_start_tick + work_cycles
-
-      # Continue work if needed
-      if addr + total_consumers < state.total_work do
-        state = Map.update!(state, :cur_addr, &(&1 + total_consumers))
-        run(state)
-      else
-        IO.puts(:stderr, "consumer #{state.consumer_id} sending to tester")
-        send(tester_pid, {:consumer_done, state.consumer_id, state.tick_number})
-        IO.puts(:stderr, "consumer #{state.consumer_id} entering spin")
-        spin(state)
-      end
-    end
+    state
+    |> Map.put(:scratchpad_input, scratchpad_input)
+    |> Map.put(:cur_addr, state.consumer_id)
   end
 
-  test "simulate consumption of RAS wrapped PLM" do
-    bank_size = 512
-    nbanks = 1
-    max_value = 65536
-    total_consumers = 1
+  defp do_work(state, cur_work_cycle, total_work_cycles)
+       when cur_work_cycle >= total_work_cycles do
+    state
+  end
+
+  defp do_work(state, cur_work_cycle, total_work_cycles)
+       when cur_work_cycle < total_work_cycles do
+    state = wait(state)
+    do_work(state, cur_work_cycle + 1, total_work_cycles)
+  end
+
+  defp spin(state) do
+    wait(state) |> spin()
+  end
+
+  def run(state) do
+    tester_pid = state.tester_pid
+    scratchpad_input = state.scratchpad_input
+    addr = state.cur_addr
+    total_consumers = state.total_consumers
+    work_cycles = state.work_cycles
+
+    # Read the value
+    read_start_tick = state.tick_number
+    {state, _} = Saladin.ArbiterInterface.read(scratchpad_input, addr, state)
+
+    assert state.tick_number >=
+             read_start_tick + Saladin.ArbiterInterface.min_op_latency()
+
+    # Simulate work for # work cycles
+    work_start_tick = state.tick_number
+    state = do_work(state, 0, work_cycles)
+    assert state.tick_number == work_start_tick + work_cycles
+
+    # Continue work if needed
+    if addr + total_consumers < state.total_work do
+      state = Map.update!(state, :cur_addr, &(&1 + total_consumers))
+      run(state)
+    else
+      # IO.puts(:stderr, "consumer #{state.consumer_id} sending to tester")
+      send(tester_pid, {:consumer_done, state.consumer_id, state.tick_number})
+      # IO.puts(:stderr, "consumer #{state.consumer_id} entering spin")
+      spin(state)
+    end
+  end
+end
+
+defmodule Saladin.ArbiterRRBehavioralTests do
+  use ExUnit.Case
+
+  def run_simulation(config) do
+    bank_size = config.bank_size
+    nbanks = config.nbanks
+    max_value = config.max_value
+    total_consumers = config.total_consumers
     total_work = bank_size * nbanks
-    work_cycles = 1
+    work_cycles = config.work_cycles
+    arbiter = config.arbiter
 
     # Generate the list of values to populate the PLM with
     plm_init = 0..(bank_size - 1) |> Enum.map(&{&1, :rand.uniform(max_value)})
@@ -179,7 +181,7 @@ defmodule Saladin.Impls.Simulate do
     plm_config = %{nbanks: nbanks, bank_size: bank_size, plm_init: plm_init}
 
     {:ok, scratchpad_pid, _} =
-      Saladin.SimpleArbiterRR.start_link(%{
+      arbiter.start_link(%{
         clock: clock_pid,
         plm_config: plm_config,
         num_consumers: total_consumers
@@ -202,8 +204,6 @@ defmodule Saladin.Impls.Simulate do
       0..(total_consumers - 1)
       |> Enum.map(fn consumer_id -> start_scratchpad_consumer.(consumer_id) end)
 
-    IO.puts(:stderr, "#{inspect(consumers)}")
-
     # Wait for all modules to register with clock
     Saladin.Utils.wait_for_state(
       clock_pid,
@@ -216,18 +216,75 @@ defmodule Saladin.Impls.Simulate do
     )
 
     Saladin.Clock.start_clock(clock_pid)
-    IO.puts(:stderr, "clock started")
 
     consumer_work_receipts =
       1..total_consumers
       |> Enum.map(fn _ ->
         receive do
           {:consumer_done, consumer_id, tick_number} ->
-            IO.puts(:stderr, "consumer #{consumer_id} done")
             {consumer_id, tick_number}
         end
       end)
 
-    IO.puts(:stderr, "#{inspect(consumer_work_receipts)}")
+    finish_time = consumer_work_receipts |> Enum.map(fn {_, tick} -> tick end) |> Enum.max()
+
+    finish_time
+  end
+
+  test "SimpleArbiterRR behaviour test" do
+    bank_size = 8
+    nbanks = 1
+
+    config = %{
+      bank_size: bank_size,
+      nbanks: nbanks,
+      max_value: 65536,
+      total_consumers: 2,
+      total_work: bank_size * nbanks,
+      work_cycles: 1,
+      arbiter: Saladin.SimpleArbiterRR
+    }
+
+    finish_time = Saladin.ArbiterRRBehavioralTests.run_simulation(config)
+
+    assert finish_time == 18
+  end
+
+  test "OptimizedArbiterRR behaviour test 2 consumers" do
+    bank_size = 8
+    nbanks = 1
+
+    config = %{
+      bank_size: bank_size,
+      nbanks: nbanks,
+      max_value: 65536,
+      total_consumers: 2,
+      total_work: bank_size * nbanks,
+      work_cycles: 1,
+      arbiter: Saladin.OptimizedArbiterRR
+    }
+
+    finish_time = Saladin.ArbiterRRBehavioralTests.run_simulation(config)
+
+    assert finish_time == 17
+  end
+
+  test "OptimizedArbiterRR behaviour test 4 consumers" do
+    bank_size = 8
+    nbanks = 1
+
+    config = %{
+      bank_size: bank_size,
+      nbanks: nbanks,
+      max_value: 65536,
+      total_consumers: 4,
+      total_work: bank_size * nbanks,
+      work_cycles: 1,
+      arbiter: Saladin.OptimizedArbiterRR
+    }
+
+    finish_time = Saladin.ArbiterRRBehavioralTests.run_simulation(config)
+
+    assert finish_time == 11
   end
 end
