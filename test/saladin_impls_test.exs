@@ -1,12 +1,11 @@
-defmodule Saladin.Impls.ArbitratedScratchpadTest do
+defmodule Saladin.SimpleArbiterRRTest do
   use ExUnit.Case
 
   defmodule BasicConsumerModule do
     use Saladin.Module
 
     def reset(state) do
-      scratchpad_input =
-        Saladin.Impls.ScratchpadConsumerInterface.register_consumer(state.scratchpad_pid, state)
+      scratchpad_input = Saladin.ArbiterInterface.register_consumer(state.scratchpad_pid, state)
 
       state |> Map.put(:scratchpad_input, scratchpad_input)
     end
@@ -20,15 +19,14 @@ defmodule Saladin.Impls.ArbitratedScratchpadTest do
       state =
         receive do
           {:test_read, addr} ->
-            {state, res} =
-              Saladin.Impls.ScratchpadConsumerInterface.read(scratchpad_input, addr, state)
+            {state, res} = Saladin.ArbiterInterface.read(scratchpad_input, addr, state)
 
             send(test_server, {res, req_start_tick_number})
             state
 
           {:test_write, addr, value} ->
             {state, res} =
-              Saladin.Impls.ScratchpadConsumerInterface.write(
+              Saladin.ArbiterInterface.write(
                 scratchpad_input,
                 addr,
                 value,
@@ -53,7 +51,7 @@ defmodule Saladin.Impls.ArbitratedScratchpadTest do
     plm_config = %{nbanks: 1, bank_size: 512}
 
     {:ok, scratchpad_pid, _} =
-      Saladin.Impls.ArbitratedScratchpad.start_link(%{
+      Saladin.SimpleArbiterRR.start_link(%{
         clock: clock_pid,
         plm_config: plm_config,
         num_consumers: 1
@@ -87,7 +85,7 @@ defmodule Saladin.Impls.ArbitratedScratchpadTest do
       # Req_done_tick marks the clock cycle when the value was written in response register.module()
       # min_op_latency measures the period until the value is available to the consumer.module
       # Since there is a single consumer,
-      assert req_start_tick + Saladin.Impls.ScratchpadConsumerInterface.min_op_latency() ==
+      assert req_start_tick + Saladin.ArbiterInterface.min_op_latency() ==
                req_done_tick
 
       send(tester_pid, {:test_read, test_addr})
@@ -96,7 +94,7 @@ defmodule Saladin.Impls.ArbitratedScratchpadTest do
       assert read_addr == addr
       assert read_value == value
 
-      assert req_start_tick + Saladin.Impls.ScratchpadConsumerInterface.min_op_latency() ==
+      assert req_start_tick + Saladin.ArbiterInterface.min_op_latency() ==
                req_done_tick
     end
   end
@@ -109,8 +107,7 @@ defmodule Saladin.Impls.Simulate do
     use Saladin.Module
 
     def reset(state) do
-      scratchpad_input =
-        Saladin.Impls.ScratchpadConsumerInterface.register_consumer(state.scratchpad_pid, state)
+      scratchpad_input = Saladin.ArbiterInterface.register_consumer(state.scratchpad_pid, state)
 
       state
       |> Map.put(:scratchpad_input, scratchpad_input)
@@ -141,10 +138,10 @@ defmodule Saladin.Impls.Simulate do
 
       # Read the value
       read_start_tick = state.tick_number
-      {state, _} = Saladin.Impls.ScratchpadConsumerInterface.read(scratchpad_input, addr, state)
+      {state, _} = Saladin.ArbiterInterface.read(scratchpad_input, addr, state)
 
       assert state.tick_number >=
-               read_start_tick + Saladin.Impls.ScratchpadConsumerInterface.min_op_latency()
+               read_start_tick + Saladin.ArbiterInterface.min_op_latency()
 
       # Simulate work for # work cycles
       work_start_tick = state.tick_number
@@ -182,7 +179,7 @@ defmodule Saladin.Impls.Simulate do
     plm_config = %{nbanks: nbanks, bank_size: bank_size, plm_init: plm_init}
 
     {:ok, scratchpad_pid, _} =
-      Saladin.Impls.ArbitratedScratchpad.start_link(%{
+      Saladin.SimpleArbiterRR.start_link(%{
         clock: clock_pid,
         plm_config: plm_config,
         num_consumers: total_consumers
