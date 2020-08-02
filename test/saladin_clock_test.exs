@@ -80,9 +80,9 @@ defmodule Saladin.Clock.ModuleIntegrationTest do
     assert tick_count > 1000
   end
 
-  test "clock works with 50 modules and 10_000 ticks" do
-    nmodules = 50
-    nticks = 10_000
+  test "clock works with 10 modules and 10_00 ticks" do
+    nmodules = 10
+    nticks = 10_00
 
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
 
