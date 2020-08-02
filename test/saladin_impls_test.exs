@@ -170,6 +170,7 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     total_work = bank_size * nbanks
     work_cycles = config.work_cycles
     arbiter = config.arbiter
+    ports_per_bank = Map.get(config, :ports_per_bank, 1)
 
     # Generate the list of values to populate the PLM with
     plm_init = 0..(bank_size - 1) |> Enum.map(&{&1, :rand.uniform(max_value)})
@@ -178,7 +179,12 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     {:ok, clock_pid} = Saladin.Clock.start_link(%{})
 
     # Initialize the ScratchPad
-    plm_config = %{nbanks: nbanks, bank_size: bank_size, plm_init: plm_init}
+    plm_config = %{
+      nbanks: nbanks,
+      bank_size: bank_size,
+      plm_init: plm_init,
+      ports_per_bank: ports_per_bank
+    }
 
     {:ok, scratchpad_pid, _} =
       arbiter.start_link(%{
@@ -281,6 +287,27 @@ defmodule Saladin.ArbiterRRBehavioralTests do
       total_work: bank_size * nbanks,
       work_cycles: 1,
       arbiter: Saladin.OptimizedArbiterRR
+    }
+
+    finish_time = Saladin.ArbiterRRBehavioralTests.run_simulation(config)
+
+    assert finish_time == 11
+  end
+
+  test "OptimizedArbiterRR behaviour test 8 consumers and 2 ports" do
+    bank_size = 16
+    nbanks = 1
+    ports_per_bank = 2
+
+    config = %{
+      bank_size: bank_size,
+      nbanks: nbanks,
+      max_value: 65536,
+      total_consumers: 8,
+      total_work: bank_size * nbanks,
+      work_cycles: 1,
+      arbiter: Saladin.OptimizedArbiterRR,
+      ports_per_bank: ports_per_bank
     }
 
     finish_time = Saladin.ArbiterRRBehavioralTests.run_simulation(config)
