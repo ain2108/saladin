@@ -42,41 +42,78 @@ defmodule Saladin.OptimizedArbiterRR do
     wait_consumer_registration(state, 0, state.num_consumers)
   end
 
+  def handle_request(tick_number, cur_consumer, plm, _bank_id) do
+    receive do
+      # Notice the strict <, req_tick_number is the cycle on which the consumer was driving register inputs
+      # req_tick_number + 1 is the earliest cycle when request register value is available to the arbitrator
+      {:read, addr, pid, req_tick_number}
+      when req_tick_number < tick_number and pid == cur_consumer ->
+        [{_, value}] = :ets.lookup(plm, addr)
+
+        # tick_number -- arbiter submits request to PLM
+        # tick_number + 1 -- PLM returns the value, control logic routes the value to the consumer's response register
+        # tick_number + 2 -- Consumer can use the value in the response register
+        Saladin.Module.Input.drive(pid, {:read_done, addr, value, tick_number + 2})
+        :ok
+
+      {:write, addr, value, pid, req_tick_number}
+      when req_tick_number < tick_number and pid == cur_consumer ->
+        :ets.insert(plm, {addr, value})
+
+        Saladin.Module.Input.drive(pid, {:write_done, addr, value, tick_number + 2})
+        :ok
+    after
+      0 -> :ok
+    end
+  end
+
+  def generate_ids_for_bank(pivot, ports_per_bank, num_consumers) do
+    split = div(num_consumers, ports_per_bank)
+
+    0..(ports_per_bank - 1)
+    |> Enum.map(fn i ->
+      rem(pivot + split * i, num_consumers)
+    end)
+  end
+
+  def generate_request_candidates(pivot, ports_per_bank, num_consumers, nbanks) do
+    0..(nbanks - 1)
+    |> Enum.map(fn bank_id ->
+      {bank_id, generate_ids_for_bank(pivot + bank_id, ports_per_bank, num_consumers)}
+    end)
+  end
+
   def run(state) do
     # Check if there is a
     tick_number = state.tick_number
-    cur_consumer = state.consumers[state.cur_consumer_i]
+    plm = state.plm
 
-    # We want to read the request sent on previous clock cycle
-    state =
-      receive do
-        # Notice the strict <, req_tick_number is the cycle on which the consumer was driving register inputs
-        # req_tick_number + 1 is the earliest cycle when request register value is available to the arbitrator
-        {:read, addr, pid, req_tick_number}
-        when req_tick_number < tick_number and pid == cur_consumer ->
-          [{_, value}] = :ets.lookup(state.plm, addr)
+    # The pivot that defines
+    pivot = state.cur_consumer_i
+    ports_per_bank = Map.get(state.plm_config, :ports_per_bank, 1)
 
-          # tick_number -- arbiter submits request to PLM
-          # tick_number + 1 -- PLM returns the value, control logic routes the value to the consumer's response register
-          # tick_number + 2 -- Consumer can use the value in the response register
-          Saladin.Module.Input.drive(pid, {:read_done, addr, value, state.tick_number + 2})
+    # For each bank generate the ids that its ports are sensitive to
+    request_candidates =
+      generate_request_candidates(
+        pivot,
+        ports_per_bank,
+        state.num_consumers,
+        state.plm_config.nbanks
+      )
 
-          # After arbiter submites the request to PLM on cycle n, it can move on to the next consumer on cycle n+1
-          # So need to wait for a single clock cycle
-          wait(state)
+    # IO.puts(:stderr, "#{Vinspect(request_candidates)}")
 
-        {:write, addr, value, pid, req_tick_number}
-        when req_tick_number < tick_number and pid == cur_consumer ->
-          :ets.insert(state.plm, {addr, value})
-
-          Saladin.Module.Input.drive(pid, {:write_done, addr, value, state.tick_number + 2})
-
-          wait(state)
-      after
-        # If no valid request, need to wait a clock cycle anyways
-        0 -> wait(state)
+    # Our goal is to collect request_candidates = [{bank0, [cid0, cid2]}, {bank1, [cid1, cid2]}]
+    for {bank_id, cids} <- request_candidates do
+      for cid <- cids do
+        cur_consumer = state.consumers[cid]
+        :ok = Saladin.OptimizedArbiterRR.handle_request(tick_number, cur_consumer, plm, bank_id)
       end
+    end
 
+    # After arbiter submites the request to PLM on cycle n, it can move on to the next consumer on cycle n+1
+    # So need to wait for a single clock cycle
+    state = wait(state)
     state |> Map.update!(:cur_consumer_i, &rem(&1 + 1, state.num_consumers)) |> run()
   end
 end
