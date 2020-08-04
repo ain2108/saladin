@@ -25,19 +25,12 @@ defmodule Saladin.BasicScratchpadReader do
     wait(state) |> spin()
   end
 
-  defp get_and_update_addr(state) do
-    addr = state.cur_addr
-    done = addr + state.total_consumers < state.total_work
-    state = Map.update!(state, :cur_addr, &(&1 + state.total_consumers))
-    {state, addr, done}
-  end
-
   def run(state) do
     tester_pid = state.tester_pid
     scratchpad_input = state.scratchpad_input
     work_cycles = state.work_cycles
 
-    {state, addr, done} = get_and_update_addr(state)
+    {state, addr, done} = state.update.(state)
 
     # Read the value
     {state, read_value} = Saladin.ArbiterInterface.read(scratchpad_input, addr, state)

@@ -1,6 +1,19 @@
 defmodule Saladin.ArbiterRRBehavioralTests do
   use ExUnit.Case
 
+  def get_reader_update() do
+    update_fun = fn state ->
+      addr = state.cur_addr
+      done = addr + state.total_consumers < state.total_work
+      state = Map.update!(state, :cur_addr, &(&1 + state.total_consumers))
+      {state, addr, done}
+    end
+
+    update_state = %{}
+
+    {update_fun, update_state}
+  end
+
   test "SimpleArbiterRR behaviour test" do
     bank_size = 8
     nbanks = 1
@@ -13,7 +26,8 @@ defmodule Saladin.ArbiterRRBehavioralTests do
       max_value: 65536,
       total_consumers: 2,
       total_work: bank_size * nbanks,
-      work_cycles: 1
+      work_cycles: 1,
+      consumer_update: get_reader_update()
     }
 
     finish_time =
@@ -34,7 +48,8 @@ defmodule Saladin.ArbiterRRBehavioralTests do
       max_value: 65536,
       total_consumers: 2,
       total_work: bank_size * nbanks,
-      work_cycles: 1
+      work_cycles: 1,
+      consumer_update: get_reader_update()
     }
 
     finish_time =
@@ -55,7 +70,8 @@ defmodule Saladin.ArbiterRRBehavioralTests do
       max_value: 65536,
       total_consumers: 4,
       total_work: bank_size * nbanks,
-      work_cycles: 1
+      work_cycles: 1,
+      consumer_update: get_reader_update()
     }
 
     finish_time =
@@ -78,7 +94,8 @@ defmodule Saladin.ArbiterRRBehavioralTests do
       total_consumers: 8,
       total_work: bank_size * nbanks,
       work_cycles: 1,
-      ports_per_bank: ports_per_bank
+      ports_per_bank: ports_per_bank,
+      consumer_update: get_reader_update()
     }
 
     finish_time =

@@ -7,6 +7,7 @@ defmodule Saladin.Sim.ScratchpadArbitration do
     total_work = bank_size * nbanks
     work_cycles = config.work_cycles
     ports_per_bank = Map.get(config, :ports_per_bank, 1)
+    {update, update_state} = config.consumer_update
 
     # Generate the list of values to populate the PLM with
     plm_init = 0..(bank_size - 1) |> Enum.map(&{&1, :rand.uniform(max_value)})
@@ -38,7 +39,9 @@ defmodule Saladin.Sim.ScratchpadArbitration do
         consumer_id: consumer_id,
         total_consumers: total_consumers,
         total_work: total_work,
-        work_cycles: work_cycles
+        work_cycles: work_cycles,
+        update: update,
+        update_state: update_state
       })
     end
 
