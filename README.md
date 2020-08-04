@@ -1,21 +1,15 @@
 # Saladin
 
-**TODO: Add description**
+Saladin is a tool for cycle accurate simulation of PLM utilization. For example, given a hardware accelerator, the library aims at making it easy for a designer to determine if Round Robin PLM arbitration yields a Pareto optimal solution.
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `saladin` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:saladin, "~> 0.1.0"}
-  ]
-end
+Saladin is powered by Elixir, so you will definately need to install it first.
+On MaxOS: 
+```bash
+brew install elixir
 ```
+For other platforms, please check this link: https://elixir-lang.org/install.html
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/saladin](https://hexdocs.pm/saladin).
+## Getting started
+While the library will provide solutions 
 
