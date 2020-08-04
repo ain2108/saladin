@@ -10,6 +10,16 @@ brew install elixir
 ```
 For other platforms, please check this link: https://elixir-lang.org/install.html
 
+`mix` tool should be in your path now. To install the project dependencies, please run:
+```bash
+mix deps.get
+```
+
+Finally, to make sure everything is in great shape, please run the tests:
+```bash
+mix test
+```
+
 ## Getting started
 While the library will provide solutions 
 
