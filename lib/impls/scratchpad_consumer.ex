@@ -1,4 +1,4 @@
-defmodule Saladin.BasicScratchpadConsumer do
+defmodule Saladin.BasicScratchpadReader do
   use Saladin.Module
 
   def reset(state) do
@@ -7,6 +7,7 @@ defmodule Saladin.BasicScratchpadConsumer do
     state
     |> Map.put(:scratchpad_input, scratchpad_input)
     |> Map.put(:cur_addr, state.consumer_id)
+    |> Map.put(:prev_read_value, nil)
   end
 
   defp do_work(state, cur_work_cycle, total_work_cycles)
@@ -24,22 +25,29 @@ defmodule Saladin.BasicScratchpadConsumer do
     wait(state) |> spin()
   end
 
+  defp get_and_update_addr(state) do
+    addr = state.cur_addr
+    done = addr + state.total_consumers < state.total_work
+    state = Map.update!(state, :cur_addr, &(&1 + state.total_consumers))
+    {state, addr, done}
+  end
+
   def run(state) do
     tester_pid = state.tester_pid
     scratchpad_input = state.scratchpad_input
-    addr = state.cur_addr
-    total_consumers = state.total_consumers
     work_cycles = state.work_cycles
 
+    {state, addr, done} = get_and_update_addr(state)
+
     # Read the value
-    {state, _} = Saladin.ArbiterInterface.read(scratchpad_input, addr, state)
+    {state, read_value} = Saladin.ArbiterInterface.read(scratchpad_input, addr, state)
+    state = %{state | prev_read_value: read_value}
 
     # Simulate work for # work cycles
     state = do_work(state, 0, work_cycles)
 
     # Continue work if needed
-    if addr + total_consumers < state.total_work do
-      state = Map.update!(state, :cur_addr, &(&1 + total_consumers))
+    if done do
       run(state)
     else
       send(tester_pid, {:consumer_done, state.consumer_id, state.tick_number})

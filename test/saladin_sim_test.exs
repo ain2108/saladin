@@ -5,7 +5,7 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     bank_size = 8
     nbanks = 1
     arbiter = Saladin.SimpleArbiterRR
-    consumer_module = Saladin.BasicScratchpadConsumer
+    consumer_module = Saladin.BasicScratchpadReader
 
     config = %{
       bank_size: bank_size,
@@ -26,7 +26,7 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     bank_size = 8
     nbanks = 1
     arbiter = Saladin.OptimizedArbiterRR
-    consumer_module = Saladin.BasicScratchpadConsumer
+    consumer_module = Saladin.BasicScratchpadReader
 
     config = %{
       bank_size: bank_size,
@@ -47,7 +47,7 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     bank_size = 8
     nbanks = 1
     arbiter = Saladin.OptimizedArbiterRR
-    consumer_module = Saladin.BasicScratchpadConsumer
+    consumer_module = Saladin.BasicScratchpadReader
 
     config = %{
       bank_size: bank_size,
@@ -69,7 +69,7 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     nbanks = 1
     ports_per_bank = 2
     arbiter = Saladin.OptimizedArbiterRR
-    consumer_module = Saladin.BasicScratchpadConsumer
+    consumer_module = Saladin.BasicScratchpadReader
 
     config = %{
       bank_size: bank_size,
