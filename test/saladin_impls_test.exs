@@ -99,4 +99,3 @@ defmodule Saladin.SimpleArbiterRRTest do
     end
   end
 end
-
