@@ -1,5 +1,5 @@
 defmodule Saladin.Sim.ScratchpadArbitration do
-  def run_simulation(config, arbiter) do
+  def run_simulation(config, arbiter_module, consumer_module) do
     bank_size = config.bank_size
     nbanks = config.nbanks
     max_value = config.max_value
@@ -23,7 +23,7 @@ defmodule Saladin.Sim.ScratchpadArbitration do
     }
 
     {:ok, scratchpad_pid, _} =
-      arbiter.start_link(%{
+      arbiter_module.start_link(%{
         clock: clock_pid,
         plm_config: plm_config,
         num_consumers: total_consumers
@@ -31,7 +31,7 @@ defmodule Saladin.Sim.ScratchpadArbitration do
 
     # Start the consumers
     start_scratchpad_consumer = fn consumer_id ->
-      BasicConsumerModule.start_link(%{
+      consumer_module.start_link(%{
         clock: clock_pid,
         scratchpad_pid: scratchpad_pid,
         tester_pid: self(),

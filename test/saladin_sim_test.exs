@@ -5,6 +5,7 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     bank_size = 8
     nbanks = 1
     arbiter = Saladin.SimpleArbiterRR
+    consumer_module = Saladin.BasicScratchpadConsumer
 
     config = %{
       bank_size: bank_size,
@@ -15,7 +16,8 @@ defmodule Saladin.ArbiterRRBehavioralTests do
       work_cycles: 1
     }
 
-    finish_time = Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter)
+    finish_time =
+      Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter, consumer_module)
 
     assert finish_time == 18
   end
@@ -24,6 +26,7 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     bank_size = 8
     nbanks = 1
     arbiter = Saladin.OptimizedArbiterRR
+    consumer_module = Saladin.BasicScratchpadConsumer
 
     config = %{
       bank_size: bank_size,
@@ -34,7 +37,8 @@ defmodule Saladin.ArbiterRRBehavioralTests do
       work_cycles: 1
     }
 
-    finish_time = Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter)
+    finish_time =
+      Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter, consumer_module)
 
     assert finish_time == 17
   end
@@ -43,6 +47,7 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     bank_size = 8
     nbanks = 1
     arbiter = Saladin.OptimizedArbiterRR
+    consumer_module = Saladin.BasicScratchpadConsumer
 
     config = %{
       bank_size: bank_size,
@@ -53,7 +58,8 @@ defmodule Saladin.ArbiterRRBehavioralTests do
       work_cycles: 1
     }
 
-    finish_time = Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter)
+    finish_time =
+      Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter, consumer_module)
 
     assert finish_time == 11
   end
@@ -63,6 +69,7 @@ defmodule Saladin.ArbiterRRBehavioralTests do
     nbanks = 1
     ports_per_bank = 2
     arbiter = Saladin.OptimizedArbiterRR
+    consumer_module = Saladin.BasicScratchpadConsumer
 
     config = %{
       bank_size: bank_size,
@@ -74,7 +81,8 @@ defmodule Saladin.ArbiterRRBehavioralTests do
       ports_per_bank: ports_per_bank
     }
 
-    finish_time = Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter)
+    finish_time =
+      Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter, consumer_module)
 
     assert finish_time == 11
   end
