@@ -1,3 +1,4 @@
+![image](./saladin_logo.jpeg)
 # Saladin
 
 Saladin is a tool for cycle accurate simulation of PLM utilization. For example, given a hardware accelerator, the library aims at making it easy for a designer to determine if Round Robin PLM arbitration yields a Pareto optimal solution.
@@ -62,4 +63,60 @@ def get_reader_update() do
 end
 ```
 
-## 
+## Docs
+
+This section covers how to use the primitives provided by Saladin to build your own custom simulations. 
+
+### General Concepts
+
+Saladin is powered by Elixir/Erlang. The main reason for this is the Actor model. Each hardware module is modelled in Saladin as an Erlang process. Signal exchange is implemented using interprocess messaging. Saladin handles most of the plumbing under the cover, allowing the library user to design custom modules with relative ease.
+
+### Generic Module Process: Saladin.Module
+To simplify the process of describing custom hardware modules, Saladin provides the `Saladin.Module` functionality. An example of a `Saladin.Module` is the `Saladin.SimpleArbiterRR`:
+```elixir
+defmodule Saladin.SimpleArbiterRR do
+  use Saladin.Module
+  # ...
+end
+```
+Using a `Saladin.Module` bring a lot of functionality necessary to integrate the custom module with other Saladin modules. The only requirement is that the custom module defines a `run(state)` funtion, and optionally a `reset(state)` function. Here is how `Saladin.SimpleArbiterRR.reset` is defined:
+```elixir
+def reset(state) do
+
+  # Representation for the PLM
+  plm = :ets.new(:buckets_registry, [:set, :private])
+
+  plm_init = Map.get(state.plm_config, :plm_init, [])
+
+  # Initialize the PLM
+  for addr <- 0..(state.plm_config.nbanks * state.plm_config.bank_size - 1),
+      do: :ets.insert(plm, {addr, 0})
+
+  # Update PLM with init values
+  for addr_value <- plm_init do
+    :ets.insert(plm, addr_value)
+  end
+
+  # Wait for all consumers to register
+  state = state |> Map.put(:consumers, %{}) |> Map.put(:plm, plm) |> Map.put(:cur_consumer_i, 0)
+  wait_consumer_registration(state, 0, state.num_consumers)
+  end
+```
+
+Elixir is a functional language. It is therefore mendatory to keep passing `state` everywhere. At first it might seem like a hastle, but immutability of Elixir prevents us from fighting a log of horrible bugs. So its a small price to pay. The most dangerous place where the state can be forgotten is the invocation of the `wait(state)` function that can be found in `Saladin.Utils`, but is imported automatically with `Saladin.Module`. This is a very imporant function as it tells the `Saladin.Clock` module that the work for this clock cycle has been completed, and that your module is ready for the next clock cycle. 
+
+### Clock Process: Saladin.Clock
+
+`Saladin.Clock` is the process that models the circuit clock, and every simulation will likely be using one.
+```elixir
+{:ok, clock_pid} = Saladin.Clock.start_link(%{})
+```
+The `clock_pid` is the identifier that is used to refer to the clock process; it should be passed to all the other `Saladin.Module`'s at startup.
+```elixir
+{:ok, scratchpad_pid, _} =
+  Saladin.SimpleArbiterRR.start_link(%{
+    clock: clock_pid,
+    plm_config: plm_config,
+    num_consumers: 1
+  })
+```
