@@ -120,7 +120,7 @@ class SheetRenderer:
                 elif isinstance(sim[i], ConsumerDataPoint):
                     SheetRenderer.type_append_con(self, sim[i])
                     SheetRenderer.color_con_blocks(self, sim[i])
-                self.row_index += 4
+            self.row_index += 4
 
     #reset all the variables to initial position for each new simulation
 
@@ -211,9 +211,14 @@ class ArbiterDataPoint(DataPoint):
 class ConsumerDataPoint(DataPoint):
 
     def __init__(self, consumer_id, operation, cycle_number):
-        self.consumer_id = consumer_id
+        self.consumer_id = ConsumerId(consumer_id)
         self.operation = operation
         self.cycle_number = cycle_number
+
+class ConsumerId():
+
+    def __init__(self, consumer_id):
+        self.consumer_id = consumer_id
         self.dark_colors = None
         self.light_colors = None
 
