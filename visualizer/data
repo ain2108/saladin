@@ -1,4 +1,5 @@
 =====SIM
+*Config Info
 a,arbiter,consumer1,1
 a,arbiter,consumer1,2
 a,arbiter,consumer2,3
@@ -9,16 +10,3 @@ c,consumer1,work,3
 c,consumer2,io,4
 =====SIM-END
 
-
-=====SIM
-a,arbiter_id,consumer_id, 0
-c,consumer_id,io,1
-c,consumer_id,work,2
-c,consumer_id,work,3
-=====SIM-END
-
-=====SIM
-a,arbiter_id,consumer_id,1
-c,consumer_id,io,2
-c,consumer_id,work,3
-=====SIM-END
