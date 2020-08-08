@@ -4,9 +4,30 @@ a,arbiter,consumer1,1
 a,arbiter,consumer1,2
 a,arbiter,consumer2,3
 a,arbiter,consumer2,4
+a,arbiter2,consumer1,1
+a,arbiter2,consumer1,2
+a,arbiter2,consumer2,3
+a,arbiter2,consumer2,4
+c,consumer1,io,0
+c,consumer2,io,0
+
+c,consumer1,work,3
+c,consumer1,io,8
+=====SIM-END
+
+=====SIM
+*Configggg Info
+a,arbiter,consumer1,1
+a,arbiter,consumer1,2
+a,arbiter,consumer2,3
+a,arbiter,consumer2,4
 c,consumer1,io,0
 c,consumer2,io,0
 c,consumer1,work,3
-c,consumer2,io,4
+c,consumer1,io,4
 =====SIM-END
 
+todo:
+
+add configuration data
+amount of columns

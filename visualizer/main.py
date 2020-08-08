@@ -1,4 +1,3 @@
-from __future__ import print_function
 import pickle
 import os.path
 
@@ -17,19 +16,27 @@ class Parser:
 
     def __init__(self, file_path, begin, end):
         simulations = []
+        config_data = []
         with open(file_path) as f:
             for line in f:
                 # found start of section so start iterating from next line
                 if line.startswith(begin):
                     simulation = []
+
                     for line in f:
                         # found end so end function
                         if line.startswith(end):
                             simulations.append(simulation)
                             break
+
+                        elif line.startswith('*'):
+                            config_data.append(line)
+
                         dp = self.string_to_datapoint(line)
                         # yield every line in the section
                         simulation.append(dp)
+
+        self.config = config_data
         self.sims = simulations
 
     def string_to_datapoint(self, line) -> DataPoint:
@@ -45,46 +52,27 @@ class Parser:
 
 class SheetRenderer:
 
-    def __init__(self, service, sims):
+    def __init__(self, service, sims, config):
         self.l_c_dict = {
-            "dark_yellow_1": (241, 194, 50),
-            "dark_green_1": (106, 168, 79),
-            "dark_cornflower_blue 1": (60, 120, 216),
-            "dark_red_1": (204, 0, 0),
-            'dark_purple_1': [103, 78, 167],
-            'dark_magenta_1': [166, 77, 121],
-            'dark_cyan_1': [69, 129, 142],
-            'dark_orange_1': [230, 145, 56],
+            "dark_yellow_1": (0.94, 0.76, 0.2),
+            "dark_green_1": (0.42, 0.66, 0.31),
+            "dark_cornflower_blue 1": (0.24, 0.5, 0.85),
+            "dark_red_1": (0.8, 0, 0),
+            'dark_purple_1': (0.4, 0.31, 0.65),
+            'dark_magenta_1': (0.65, 0.3, 0.47),
+            'dark_cyan_1': (0.27, 0.51, 0.56),
+            'dark_orange_1': (0.9, 0.57, 0.22),
         }
 
         self.d_c_dict = {
-            "dark_yellow_3": (127, 96, 0),
-            "dark_green_3": (39, 78, 19),
-            "dark_cornflower_blue 3": (28, 69, 135),
-            'dark_red_3': [102, 0, 0],
-            'dark_purple_3': [32, 18, 77],
-            'dark_magenta_3': [76, 17, 48],
-            'dark_cyan_3': [12, 52, 61],
-            'dark_orange_3': [120, 63, 4]
-        }
-
-        self.dict = {
-            "dark_yellow_1": [241, 194, 50],
-            "dark_green_1": [106, 168, 79],
-            "dark_cornflower_blue 1": [60, 120, 216],
-            "dark_red_1": [204, 0, 0],
-            'dark_purple_1': [103, 78, 167],
-            'dark_magenta_1': [166, 77, 121],
-            'dark_cyan_1': [69, 129, 142],
-            'dark_orange_1': [230, 145, 56],
-            "dark_yellow_3": (127, 96, 0),
-            "dark_green_3": (39, 78, 19),
-            "dark_cornflower_blue 3": (28, 69, 135),
-            'dark_red_3': (102, 0, 0),
-            'dark_purple_3': (32, 18, 77),
-            'dark_magenta_3': (76, 17, 48),
-            'dark_cyan_3': (12, 52, 61),
-            'dark_orange_3': (120, 63, 4)
+            "dark_yellow_3": (0.49, 0.37, 0),
+            "dark_green_3": (0.15, 0.31, 0.07),
+            "dark_cornflower_blue 3": (0.11, 0.27, 0.53),
+            'dark_red_3': (0.4, 0, 0),
+            'dark_purple_3': (0.13, 0.01, 0.3),
+            'dark_magenta_3': (0.3, 0.07, 0.19),
+            'dark_cyan_3': (0.05, 0.21, 0.24),
+            'dark_orange_3': (0.5, 0.25, 0.02)
         }
 
         self.extra_light_colors = {
@@ -97,24 +85,29 @@ class SheetRenderer:
         self.requests = []
         self.service = service
         self.sims = sims
+        self.config = config
         self.offset_row = 0
-        self.offset_row_add = 0
-
+        self.start_of_con_in_sim = 0
+        self.start_of_arb_in_sim = 0
 
     # find and register all unique arbiters
 
-    def assign_arbiter(self, sim):
+    def assign_arbiters(self, sim):
 
         arbiters = {}
         count = 0
 
         for dp in sim:
-            if isinstance(dp, ArbiterDataPoint) and dp.arbiter_id in arbiters:
+            if isinstance(dp, ArbiterDataPoint) and dp.arbiter_id not in arbiters:
 
                 arbiters[dp.arbiter_id] = (dp.arbiter_id, count)
                 count += 1
 
-        self.create_var_arb(arbiters)
+                pass_arb_Id = dp.arbiter_id
+                self.create_var_for_arb(arbiters, pass_arb_Id)
+
+        self.start_of_con_in_sim = self.offset_row
+
         return arbiters
 
     #find and register all consumers and assign a color to each unique one
@@ -132,81 +125,116 @@ class SheetRenderer:
 
                 l_color = l_colors[count]
                 d_color = d_colors[count]
-                ctcr[dp.consumer_id] = (l_color, d_color, count)
-
+                ctcr[dp.consumer_id] = (l_color, d_color, count, dp.cycle_number)
                 count += 1
+                pass_con_Id = dp.consumer_id
 
-        self.create_var_con(ctcr)
+                self.create_var_for_con(ctcr, pass_con_Id)
 
         return ctcr
 
     #print the arb variables
     #in order to do so, require to have an updated self.offset_row
 
-    def create_var_arb(self, arbiters):
-        row = 0 + self.offset_row
-        for arb in arbiters:
-            self.requests.append(input_data_into_cell(row, 0, "Arbiter"))
-            row += 1
-            self.offset_row += 1
+    def create_var_for_arb(self, arbiters, pass_arb_Id):
+        row = self.offset_row
+
+        self.requests.append(input_data_into_cell(row, 0, pass_arb_Id))
+
+        self.offset_row += 1
 
     #print the arb variables
     #in order to do so, require to have an updated self.offset_row
 
-    def create_var_con(self, ctcr):
-        row = 0 + self.offset_row
-        for con in ctcr:
-            self.requests.append(input_data_into_cell(row, 0, "Consumer"))
-            row += 1
-            self.offset_row += 1
+    def create_var_for_con(self, ctcr, pass_con_Id):
+        row = self.offset_row
+
+
+        self.requests.append(input_data_into_cell(row, 0, pass_con_Id))
+
+        self.offset_row += 1
 
     #get ready the info and the updated self.offset_row
 
-    def info_renderer(self):
+    def info_renderer(self, count):
+        self.print_config_data(count)
+        #self.define_clock_length()
         self.requests.append(input_data_into_cell_merged(self.offset_row, self.offset_row + 1, 1, 25))
-        self.requests.append(input_data_into_cell(self.offset_row + 1, 1, "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18"))
+        self.offset_row += 1
+        self.requests.append(input_data_into_cell(self.offset_row, 1, "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18"))
+        self.offset_row += 1
+        self.start_of_arb_in_sim = self.offset_row
+
+    #print the config data
+
+    def define_clock_length(self, ctcr):
+        for sim in self.sims:
+            for dp in sim:
+                #find the highest nunmber in the cycle_number
+                pass
+
+    def print_config_data(self, count):
+        for sim in self.sims:
+            config = self.config[count]
+            self.requests.append(input_data_into_cell(self.offset_row, self.offset_row + 1, config))
+
 
     #how the process for each simulation looks like
 
-    def render_simulation(self, sim):
+    def render_simulation(self, sim, count):
 
-        self.info_renderer()
+        self.info_renderer(count)
 
-        #self.base_consumer_row = self.offset_row + 1 + len(arbiters) + 1
-
-
-        arbiters = self.assign_arbiter(sim)
+        arbiters = self.assign_arbiters(sim)
         ctcr = self.assign_colors_to_consumers(sim, arbiters)
 
         for dp in sim:
 
             #color arbiters
             #order consumer based on arbiters
-
+            self.color_arb_blocks(dp, ctcr, arbiters)
             self.color_con_blocks(dp, ctcr)
 
+        self.offset_row += 1
+
     #make a loop that will color in each block depending on the line
+
+    def color_arb_blocks(self, dp, ctcr, arbiters):
+
+        if isinstance(dp, ArbiterDataPoint):
+
+            values = ctcr.get(dp.consumer_id)
+            arb_values = arbiters.get(dp.arbiter_id)
+            row = arb_values[1] + self.start_of_arb_in_sim
+
+            light_color = values[0]
+            column = int(dp.cycle_number) + 1
+            light_color = self.l_c_dict.get(light_color)
+            self.requests.append(update_cell_color(light_color[0], light_color[1], light_color[2], row, row + 1, int(column), int(column) + 1))
 
     def color_con_blocks(self, dp, ctcr):
 
         if isinstance(dp, ConsumerDataPoint):
 
-            # get the color of a id from the ctcr list
+            # get the color of an id from the ctcr list
+
             values = ctcr.get(dp.consumer_id)
-            light_color = values[1]
-            dark_color = values[0]
+            row = values[2] + self.start_of_con_in_sim
+
+            light_color = values[0]
+            dark_color = values[1]
             column = int(dp.cycle_number) + 1
 
             if dp.operation == 'io':
 
                 #color in the block
-                light_color = self.d_c_dict.get(light_color)
-                self.requests.append(update_cell_color(light_color[0], light_color[1], light_color[2], values[2], values[2] + 1, int(column), int(column) + 1))
+                light_color = self.l_c_dict.get(light_color)
+                self.requests.append(update_cell_color(light_color[0], light_color[1], light_color[2], row, row + 1, int(column), int(column) + 1))
 
             elif dp.operation == 'work':
 
-                dark_color = self.l_c_dict.get(dark_color)
-                self.requests.append(update_cell_color(dark_color[0], dark_color[1], dark_color[2], values[2], values[2] + 1, int(column), int(column) + 1))
+                dark_color = self.d_c_dict.get(dark_color)
+                self.requests.append(update_cell_color(dark_color[0], dark_color[1], dark_color[2], row, row + 1, int(column), int(column) + 1))
 
     #first step in creating the spreadsheet
 
@@ -217,9 +245,14 @@ class SheetRenderer:
 
     # process through the whole data /each sim rendering/ file and produce the info+blocks
 
+    #print the config data
+
     def simulations_renderer(self):
+        count = 0
         for sim in self.sims:
-            self.render_simulation(sim)
+
+            self.render_simulation(sim, count)
+            count += 1
 
     def render_sheet(self):
         self.main_details_renderer()
@@ -228,8 +261,9 @@ class SheetRenderer:
         spreadsheet_body = {
             'requests': self.requests
         }
-        # sheet = service.spreadsheets().create().execute()
+
         #create a new spreadsheet
+        # sheet = service.spreadsheets().create().execute()
 
         spreadsheetId = "1OMMaFubnCFiFJjl0NZYHkq5bSNoFI6aHCRaP3XPsewY"
         self.service.spreadsheets().batchUpdate(spreadsheetId=spreadsheetId, body=spreadsheet_body).execute()
@@ -244,14 +278,12 @@ class ArbiterDataPoint(DataPoint):
         self.consumer_id = consumer_id
         self.cycle_number = cycle_number
 
-
 class ConsumerDataPoint(DataPoint):
 
     def __init__(self, consumer_id, operation, cycle_number):
         self.consumer_id = consumer_id
         self.operation = operation
         self.cycle_number = cycle_number
-
 
 def create_name_to_sheet(title):
     return {
@@ -297,7 +329,6 @@ def input_data_into_cell(rowIndex, columnIndex, data):
             }
         }
 
-
 def update_cell_color(red, green, blue, startRowIndex, endRowIndex, startColumnIndex,endColumnIndex):
     return {
         "updateCells": {
@@ -308,7 +339,7 @@ def update_cell_color(red, green, blue, startRowIndex, endRowIndex, startColumnI
                                 "red": red,
                                 "green": green,
                                 "blue": blue,
-                                "alpha": 1,
+                                #"alpha": 0,
                                 }
                             }
                         }]
@@ -361,26 +392,8 @@ def main():
     service = discovery.build('sheets', 'v4', credentials=creds)
 
     p =  Parser('data', '=====SIM', '=====SIM-END')
-    result = SheetRenderer(service, p.sims)
+    result = SheetRenderer(service, p.sims, p.config)
     result.render_sheet()
-
-
-    '''
-    # Call the Sheets API
-    sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
-                                range=SAMPLE_RANGE_NAME).execute()
-
-    values = result.get('values', [])
-
-    if not values:
-        print('No data found.')
-    else:
-        print('Name, Major:')
-        for row in values:
-            # Print columns A and E, which correspond to indices 0 and 4.
-            print('%s, %s' % (row[0], row[4]))
-    '''
 
 if __name__ == '__main__':
      main()
