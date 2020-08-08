@@ -1,6 +1,18 @@
 defmodule Saladin.OptimizedArbiterRR do
   use Saladin.Module
 
+  defmodule Event do
+    defstruct [:arbiter_pid, :consumer_pid, :tick_number]
+  end
+
+  defp collect_event(state, consumer_pid) do
+    collect(state, %Saladin.OptimizedArbiterRR.Event{
+      arbiter_pid: self(),
+      consumer_pid: consumer_pid,
+      tick_number: state.tick_number
+    })
+  end
+
   defp wait_consumer_registration(state, cur, num_consumers) do
     # Register consumers
     if cur < num_consumers do
@@ -42,7 +54,10 @@ defmodule Saladin.OptimizedArbiterRR do
     wait_consumer_registration(state, 0, state.num_consumers)
   end
 
-  def handle_request(tick_number, cur_consumer, plm, _bank_id) do
+  def handle_request(state, cur_consumer, _bank_id) do
+    tick_number = state.tick_number
+    plm = state.plm
+
     receive do
       # Notice the strict <, req_tick_number is the cycle on which the consumer was driving register inputs
       # req_tick_number + 1 is the earliest cycle when request register value is available to the arbitrator
@@ -54,6 +69,7 @@ defmodule Saladin.OptimizedArbiterRR do
         # tick_number + 1 -- PLM returns the value, control logic routes the value to the consumer's response register
         # tick_number + 2 -- Consumer can use the value in the response register
         Saladin.Module.Input.drive(pid, {:read_done, addr, value, tick_number + 2})
+        collect_event(state, cur_consumer)
         :ok
 
       {:write, addr, value, pid, req_tick_number}
@@ -61,6 +77,7 @@ defmodule Saladin.OptimizedArbiterRR do
         :ets.insert(plm, {addr, value})
 
         Saladin.Module.Input.drive(pid, {:write_done, addr, value, tick_number + 2})
+        collect_event(state, cur_consumer)
         :ok
     after
       0 -> :ok
@@ -84,10 +101,6 @@ defmodule Saladin.OptimizedArbiterRR do
   end
 
   def run(state) do
-    # Check if there is a
-    tick_number = state.tick_number
-    plm = state.plm
-
     # The pivot that defines
     pivot = state.cur_consumer_i
     ports_per_bank = Map.get(state.plm_config, :ports_per_bank, 1)
@@ -107,7 +120,7 @@ defmodule Saladin.OptimizedArbiterRR do
     for {bank_id, cids} <- request_candidates do
       for cid <- cids do
         cur_consumer = state.consumers[cid]
-        :ok = Saladin.OptimizedArbiterRR.handle_request(tick_number, cur_consumer, plm, bank_id)
+        :ok = Saladin.OptimizedArbiterRR.handle_request(state, cur_consumer, bank_id)
       end
     end
 

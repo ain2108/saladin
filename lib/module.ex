@@ -66,6 +66,17 @@ defmodule Saladin.Module do
         reset_sequence(state |> Map.put(:tick_number, 0) |> Map.put(:input, input))
       end
 
+      defp do_collect(nil, _), do: nil
+
+      defp do_collect(collector, event) do
+        DataCollector.collect(collector, event)
+      end
+
+      defp collect(state, event) do
+        collector = Map.get(state, :collector, nil)
+        do_collect(collector, event)
+      end
+
       defp reset_sequence(state) do
         state = reset(state)
         state = wait(state)
@@ -73,7 +84,7 @@ defmodule Saladin.Module do
       end
 
       # Defoverridable makes the given functions in the current module overridable
-      # Without defoverridable, new definitions of greet will not be picked up
+      # Without defoverridable, new definitions of reset and run will not be picked up
       defoverridable reset: 1, run: 1
     end
   end
