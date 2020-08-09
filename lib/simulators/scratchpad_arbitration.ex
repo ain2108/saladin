@@ -65,11 +65,7 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
 
     events = Saladin.EventCollector.get_events(collector_pid)
 
-    for event <- events do
-      IO.puts(:stdio, "#{inspect(event)}\n")
-    end
-
-    IO.puts(:stdio, "#{finish_time}")
+    IO.puts(:stdio, "Finish cycle: #{finish_time}")
 
     defmodule EventParser do
       def parse(events) do
@@ -79,7 +75,8 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
               acc <> "c,consumer#{e.consumer_pid},#{e.op},#{e.tick_number}\n"
 
             %Saladin.OptimizedArbiterRR.Event{} ->
-              acc <> "a,arbiter#{e.arbiter_pid},consumer#{e.consumer_pid},#{e.tick_number}\n"
+              acc <>
+                "a,arbiter#{e.arbiter_pid}_#{e.port},consumer#{e.consumer_pid},#{e.tick_number}\n"
 
             # If the event is unmatched, just ignore it.
             _ ->

@@ -7,7 +7,8 @@ defmodule Saladin.BasicScratchpadReader do
 
   defp collect_event(state, op_type) do
     collect(state, %Saladin.BasicScratchpadReader.Event{
-      consumer_pid: self(),
+      # passing the input process pid
+      consumer_pid: state.input,
       op: op_type,
       tick_number: state.tick_number
     })
