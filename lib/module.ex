@@ -69,7 +69,7 @@ defmodule Saladin.Module do
       defp do_collect(nil, _), do: nil
 
       defp do_collect(collector, event) do
-        DataCollector.collect(collector, event)
+        Saladin.EventCollector.collect(collector, event)
       end
 
       defp collect(state, event) do

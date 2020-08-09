@@ -40,7 +40,7 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
     # Create directory if needed
     File.mkdir_p!(Path.dirname(file))
 
-    {:ok, collector_pid} = DataCollector.start_link()
+    {:ok, collector_pid} = Saladin.EventCollector.start_link()
 
     bank_size = 16
     nbanks = 1
@@ -63,7 +63,7 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
     finish_time =
       Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter, consumer_module)
 
-    events = DataCollector.get_events(collector_pid)
+    events = Saladin.EventCollector.get_events(collector_pid)
 
     for event <- events do
       IO.puts(:stdio, "#{inspect(event)}\n")
@@ -89,15 +89,15 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
       end
     end
 
-    {:ok, emitter_pid} = DataEmitter.start_link(file)
+    {:ok, emitter_pid} = Saladin.Data.CsvEmitter.start_link(file)
 
-    :ok = DataEmitter.emit(:sim_start, emitter_pid, "This and that")
+    :ok = Saladin.Data.CsvEmitter.emit(:sim_start, emitter_pid, "This and that")
 
-    :ok = DataEmitter.emit(:events, emitter_pid, events, EventParser)
+    :ok = Saladin.Data.CsvEmitter.emit(:events, emitter_pid, events, EventParser)
 
-    :ok = DataEmitter.emit(:sim_end, emitter_pid)
+    :ok = Saladin.Data.CsvEmitter.emit(:sim_end, emitter_pid)
 
-    :ok = DataEmitter.stop(emitter_pid)
+    :ok = Saladin.Data.CsvEmitter.stop(emitter_pid)
 
     IO.puts(:stdio, "Data emitted to file:#{file}")
   end

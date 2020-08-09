@@ -1,4 +1,4 @@
-defmodule DataEmitter do
+defmodule Saladin.Data.CsvEmitter do
   # Client API
   @spec start_link(any) :: {:ok, pid}
   def start_link(filename) do
@@ -8,7 +8,7 @@ defmodule DataEmitter do
     receive do
       {:ready, pid} when pid == module_pid -> {:ok, module_pid}
     after
-      5_000 -> exit("DataEmitter not started")
+      5_000 -> exit("Saladin.Data.CsvEmitter not started")
     end
   end
 
