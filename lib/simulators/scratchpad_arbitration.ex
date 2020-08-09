@@ -1,4 +1,10 @@
 defmodule Saladin.Simulator.ScratchpadArbitration do
+  defimpl String.Chars, for: PID do
+    def to_string(pid) do
+      inspect(pid) |> String.split(".") |> Enum.at(1)
+    end
+  end
+
   def main(args \\ []) do
     args
     |> parse_args()
@@ -65,17 +71,34 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
 
     IO.puts(:stdio, "#{finish_time}")
 
-    # {:ok, emitter_pid} = DataEmitter.start_link(file)
+    defmodule EventParser do
+      def parse(events) do
+        Enum.reduce(events, "", fn e, acc ->
+          case e do
+            %Saladin.BasicScratchpadReader.Event{} ->
+              acc <> "c,consumer#{e.consumer_pid},#{e.op},#{e.tick_number}\n"
 
-    # :ok = DataEmitter.emit(:sim_start, emitter_pid, "This and that")
+            %Saladin.OptimizedArbiterRR.Event{} ->
+              acc <> "a,arbiter#{e.arbiter_pid},consumer#{e.consumer_pid},#{e.tick_number}\n"
 
-    # payload = {"c", "consumer1", "io", "136"}
-    # :ok = DataEmitter.emit(:data, emitter_pid, payload)
+            # If the event is unmatched, just ignore it.
+            _ ->
+              acc
+          end
+        end)
+      end
+    end
 
-    # :ok = DataEmitter.emit(:sim_end, emitter_pid)
+    {:ok, emitter_pid} = DataEmitter.start_link(file)
 
-    # :ok = DataEmitter.stop(emitter_pid)
+    :ok = DataEmitter.emit(:sim_start, emitter_pid, "This and that")
 
-    # IO.puts(:stdio, "Data emitted to file:#{file}")
+    :ok = DataEmitter.emit(:events, emitter_pid, events, EventParser)
+
+    :ok = DataEmitter.emit(:sim_end, emitter_pid)
+
+    :ok = DataEmitter.stop(emitter_pid)
+
+    IO.puts(:stdio, "Data emitted to file:#{file}")
   end
 end

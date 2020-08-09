@@ -12,11 +12,14 @@ defmodule DataEmitter do
     end
   end
 
-  @spec emit(:data | :sim_start, atom | pid | port | {atom, atom}, any) :: :ok
-  def emit(:data, emitter_pid, payload) do
-    send(emitter_pid, {:data, payload})
-    :ok
-    # Don't wait for response
+  def emit(:events, emitter_pid, events, parser) do
+    send(emitter_pid, {:events, self(), events, parser})
+
+    receive do
+      {:ok, pid} when pid == emitter_pid -> :ok
+    after
+      5_000 -> exit("Data emitter not responding")
+    end
   end
 
   def emit(:sim_start, emitter_pid, sim_config) do
@@ -57,12 +60,14 @@ defmodule DataEmitter do
     run(%{file: file})
   end
 
-  defp write(:data, file, payload) do
-    csv_string =
-      (Tuple.to_list(payload) |> Enum.reduce("", fn token, acc -> acc <> token <> "," end)) <>
-        "\n"
+  defp write(:events, file, events, event_parser) do
+    # csv_string =
+    #   (Tuple.to_list(payload) |> Enum.reduce("", fn token, acc -> acc <> token <> "," end)) <>
+    #     "\n"
 
-    IO.binwrite(file, csv_string)
+    string = event_parser.parse(events)
+
+    IO.binwrite(file, string)
   end
 
   defp write(:sim_start, file, sim_config) do
@@ -87,8 +92,9 @@ defmodule DataEmitter do
   @spec run(any) :: any
   def run(state) do
     receive do
-      {:data, payload} ->
-        write(:data, state.file, payload)
+      {:events, src_pid, events, parser} ->
+        write(:events, state.file, events, parser)
+        ack(src_pid)
 
       {:sim_start, src_pid, sim_config} ->
         write(:sim_start, state.file, sim_config)
