@@ -54,10 +54,20 @@ defmodule Saladin.Utils do
     # Check if anyone wants to see the state
     report_state(state)
 
-    {:ok, tick_number} = Saladin.Clock.tick(state.clock, timeout)
+    res = Saladin.Clock.tick(state.clock, timeout)
 
-    :ok = drain_input(state.input)
+    case res do
+      {:ok, tick_number} ->
+        :ok = drain_input(state.input)
+        %{state | tick_number: tick_number}
 
-    %{state | tick_number: tick_number}
+      {:terminate} ->
+        GenServer.stop(state.input)
+        exit(:normal)
+    end
+  end
+
+  def terminate(pid) do
+    send(pid, {:terminate})
   end
 end

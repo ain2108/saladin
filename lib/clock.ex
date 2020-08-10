@@ -73,6 +73,9 @@ defmodule Saladin.Clock do
           send(pid, {:state, state})
           state
 
+        {:terminate} ->
+          exit(:normal)
+
         msg ->
           Process.exit(self(), "unknown message: #{Enum.join(Tuple.to_list(msg))}")
       end
@@ -82,7 +85,6 @@ defmodule Saladin.Clock do
     loop(state)
   end
 
-  @spec tick(atom | pid | port | {atom, atom}, :infinity | non_neg_integer) :: true | {:ok, any}
   @doc """
   Client function representing the tick of a clock. Implemented by sending :ready to the clock, and blocking
   until the :tick is received.
@@ -92,6 +94,7 @@ defmodule Saladin.Clock do
 
     receive do
       {:tick, tick_number} -> {:ok, tick_number}
+      {:terminate} -> {:terminate}
     after
       timeout ->
         Process.exit(self(), "no clock signal has been received")
