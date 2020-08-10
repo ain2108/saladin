@@ -285,7 +285,7 @@ class SheetRenderer:
             'requests': self.requests
         }
 
-        spreadsheetId = "1jdnuOYgPGbGO5TnoNSoqQ3GJeXF-Xah6IQtt-EZDbNU"
+        spreadsheetId = "18XEqpL8acvUMeUeiESXbQ8Cjq5bOa89QuPiP-qs1B_c"
         self.service.spreadsheets().batchUpdate(spreadsheetId=spreadsheetId, body=spreadsheet_body).execute()
 
         request_link = self.service.spreadsheets().get(spreadsheetId=spreadsheetId).execute()
@@ -430,11 +430,17 @@ def main():
             pickle.dump(creds, token)
     service = discovery.build('sheets', 'v4', credentials=creds)
 
+    # FIXME: 
+    import sys
+    file_name = sys.argv[1]
+    print(file_name)
+
+
     #create a new spreadsheet
     #sheet = service.spreadsheets().create().execute()
     #print(sheet)
 
-    p =  Parser('data', '===SIMBEGIN', '===SIMEND', ",")
+    p =  Parser(file_name, '===SIMBEGIN', '===SIMEND', ",")
     result = SheetRenderer(service, p.sims, p.config)
     result.render_sheet()
 
