@@ -7,6 +7,7 @@ defmodule Saladin.Sim.ScratchpadArbitration do
     total_work = bank_size * nbanks
     work_cycles = config.work_cycles
     ports_per_bank = Map.get(config, :ports_per_bank, 1)
+    collector = Map.get(config, :collector, nil)
     {update, update_state} = config.consumer_update
 
     # Generate the list of values to populate the PLM with
@@ -26,6 +27,7 @@ defmodule Saladin.Sim.ScratchpadArbitration do
     {:ok, scratchpad_pid, _} =
       arbiter_module.start_link(%{
         clock: clock_pid,
+        collector: collector,
         plm_config: plm_config,
         num_consumers: total_consumers
       })
@@ -34,6 +36,7 @@ defmodule Saladin.Sim.ScratchpadArbitration do
     start_scratchpad_consumer = fn consumer_id ->
       consumer_module.start_link(%{
         clock: clock_pid,
+        collector: collector,
         scratchpad_pid: scratchpad_pid,
         tester_pid: self(),
         consumer_id: consumer_id,
@@ -70,6 +73,14 @@ defmodule Saladin.Sim.ScratchpadArbitration do
             {consumer_id, tick_number}
         end
       end)
+
+    Saladin.Clock.stop_clock(clock_pid)
+
+    # FIXME: Need to kill clock first, fix it so if clock is dead, it kills all the other modules
+    # dependent on it.
+    Saladin.Utils.terminate(scratchpad_pid)
+    Enum.map(consumers, fn {:ok, pid, _} -> Saladin.Utils.terminate(pid) end)
+    Saladin.Utils.terminate(clock_pid)
 
     finish_time = consumer_work_receipts |> Enum.map(fn {_, tick} -> tick end) |> Enum.max()
 
