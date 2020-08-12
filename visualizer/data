@@ -48,4 +48,8 @@ c,consumer107,io,0
 c,consumer105,io,0
 c,consumer103,io,0
 c,consumer101,io,0
+c,consumer130,io,0
+c,consumer140,io,0
+c,consumer130,work,1
+c,consumer140,work,1
 ===SIMEND

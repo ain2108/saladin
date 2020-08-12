@@ -55,25 +55,50 @@ class Parser:
 class SheetRenderer:
 
     l_c_dict = {
-        "dark_yellow_1": (0.94, 0.76, 0.2),
-        "dark_green_1": (0.42, 0.66, 0.31),
+        'light_red_berry_2': (0.87, 0.5, 0.42),
+        "light_cornflower_blue 2": (0.64, 0.76, 0.96),
+        "light_green_2": (0.7, 0.84, 0.66),
+        'light_magenta_2': (0.84, 0.65, 0.74),
+        'light_cyan_2': (0.64, 0.77, 0.79),
+        'light_blue_2': (0.62, 0.77, 0.90),
+        "light_red_2": (0.92, 0.6, 0.6),
+        'light_purple_2': (0.71, 0.65, 0.84),
+        'light_orange_2': (0.98, 0.80, 0.61),
+        "light_yellow_2": (1, 0.9, 0.6),
+
+        'dark_red_berry_1': (0.65, 0.11, 0),
         "dark_cornflower_blue 1": (0.24, 0.5, 0.85),
-        "dark_red_1": (0.8, 0, 0),
-        'dark_purple_1': (0.4, 0.31, 0.65),
+        "dark_green_1": (0.42, 0.66, 0.31),
         'dark_magenta_1': (0.65, 0.3, 0.47),
         'dark_cyan_1': (0.27, 0.51, 0.56),
+        'dark_blue_1': (0.24, 0.52, 0.78),
+        "dark_red_1": (0.8, 0, 0),
+        'dark_purple_1': (0.4, 0.31, 0.65),
         'dark_orange_1': (0.9, 0.57, 0.22),
+        "dark_yellow_1": (0.94, 0.76, 0.2),
     }
 
     d_c_dict = {
-        "dark_yellow_3": (0.49, 0.37, 0),
-        "dark_green_3": (0.15, 0.31, 0.07),
+        'light_red_berry_1': (0.8, 0.25, 0.15),
+        "light_cornflower_blue 1": (0.43, 0.62, 0.92),
+        "light_green_1": (0.58, 0.77, 0.49),
+        'light_magenta_1': (0.76, 0.48, 0.63),
+        'light_cyan_1': (0.46, 0.65, 0.68),
+        'light_blue_1': (0.44, 0.66, 0.86),
+        "light_red_1": (0.88, 0.4, 0.4),
+        'light_purple_1': (0.56, 0.49, 0.76),
+        'light_orange_1': (0.95, 0.70, 0.42),
+        "light_yellow_1": (1, 0.85, 0.4),
+        'dark_red_berry_3': (0.36, 0.06, 0),
         "dark_cornflower_blue 3": (0.11, 0.27, 0.53),
-        'dark_red_3': (0.4, 0, 0),
-        'dark_purple_3': (0.13, 0.01, 0.3),
+        "dark_green_3": (0.15, 0.31, 0.07),
         'dark_magenta_3': (0.3, 0.07, 0.19),
         'dark_cyan_3': (0.05, 0.21, 0.24),
-        'dark_orange_3': (0.5, 0.25, 0.02)
+        'dark_blue_3': (0.03, 0.22, 0.39),
+        'dark_red_3': (0.4, 0, 0),
+        'dark_purple_3': (0.13, 0.01, 0.3),
+        'dark_orange_3': (0.5, 0.25, 0.02),
+        "dark_yellow_3": (0.49, 0.37, 0),
     }
 
 
@@ -195,7 +220,6 @@ class SheetRenderer:
             config = self.config[count]
             config = str(config)
             new_config = config[1:]
-            print(new_config)
             self.requests.append(input_data_into_cell(self.offset_row, self.offset_row + 1, new_config))
 
 
@@ -277,6 +301,20 @@ class SheetRenderer:
 
     def render_sheet(self):
 
+        print("Hi! Please, provide a spreadsheetId you would like to access. If you want to create a new one, type New:")
+        response = input()
+
+        if response == "New":
+            # create a new spreadsheet
+            sheet = self.service.spreadsheets().create().execute()
+            spreadsheetId = sheet['spreadsheetId']
+        else:
+            spreadsheetId = response
+
+        #spreadsheetId for testing
+        #"1jdnuOYgPGbGO5TnoNSoqQ3GJeXF-Xah6IQtt-EZDbNU" - Anna
+        #"18XEqpL8acvUMeUeiESXbQ8Cjq5bOa89QuPiP-qs1B_c" - Anton
+
         self.main_details_renderer()
 
         self.simulations_renderer()
@@ -285,11 +323,11 @@ class SheetRenderer:
             'requests': self.requests
         }
 
-        spreadsheetId = "1jdnuOYgPGbGO5TnoNSoqQ3GJeXF-Xah6IQtt-EZDbNU"
         self.service.spreadsheets().batchUpdate(spreadsheetId=spreadsheetId, body=spreadsheet_body).execute()
 
+
         request_link = self.service.spreadsheets().get(spreadsheetId=spreadsheetId).execute()
-        print(request_link)
+        print("Spreadsheet URL: " + request_link['spreadsheetUrl'] + "\n" + "Spreadsheet ID: " + request_link['spreadsheetId'])
 
 
 class ArbiterDataPoint(DataPoint):
@@ -414,8 +452,8 @@ def main():
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
+    if os.path.exists('visualizer/token.pickle'):
+        with open('visualizer/token.pickle', 'rb') as token:
             creds = pickle.load(token)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
@@ -426,15 +464,17 @@ def main():
                 'credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
+        with open('visualizer/token.pickle', 'wb') as token:
             pickle.dump(creds, token)
     service = discovery.build('sheets', 'v4', credentials=creds)
 
-    #create a new spreadsheet
-    #sheet = service.spreadsheets().create().execute()
-    #print(sheet)
+
+    # FIXME:
+    #import sys
+    #file_name = sys.argv[1]
 
     p =  Parser('data', '===SIMBEGIN', '===SIMEND', ",")
+    #p = Parser(file_name, '===SIMBEGIN', '===SIMEND', ",")
     result = SheetRenderer(service, p.sims, p.config)
     result.render_sheet()
 
