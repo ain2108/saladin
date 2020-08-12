@@ -33,8 +33,7 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
   end
 
   def get_json(filename) do
-    with {:ok, body} <- File.read(filename),
-          {:ok, json} <- Poison.decode(body), do: {:ok, json}
+    with {:ok, body} <- File.read(filename), {:ok, json} <- Poison.decode(body), do: {:ok, json}
   end
 
   defp _main({opts, _}) do
@@ -108,7 +107,14 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
 
     {:ok, emitter_pid} = Saladin.Data.CsvEmitter.start_link(file)
 
-    :ok = Saladin.Data.CsvEmitter.emit(:sim_start, emitter_pid, "a:#{sim_config["arbiter_module"]} c:#{total_consumers} w:#{config.total_work} n:#{work_cycles}")
+    :ok =
+      Saladin.Data.CsvEmitter.emit(
+        :sim_start,
+        emitter_pid,
+        "a:#{sim_config["arbiter_module"]} c:#{total_consumers} w:#{config.total_work} n:#{
+          work_cycles
+        }"
+      )
 
     :ok = Saladin.Data.CsvEmitter.emit(:events, emitter_pid, events, EventParser)
 
