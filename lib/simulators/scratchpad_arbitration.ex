@@ -14,7 +14,7 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
   defp parse_args(args) do
     {opts, word, _} =
       args
-      |> OptionParser.parse(strict: [file: :string])
+      |> OptionParser.parse(strict: [file: :string, config: :string])
 
     {opts, List.to_string(word)}
   end
@@ -32,29 +32,49 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
     {update_fun, update_state}
   end
 
+  def get_json(filename) do
+    with {:ok, body} <- File.read(filename),
+          {:ok, json} <- Poison.decode(body), do: {:ok, json}
+  end
+
   defp _main({opts, _}) do
     IO.puts(:stdio, "#{inspect(opts)}")
 
     file = Keyword.get(opts, :file, "data/data-#{:os.system_time(:millisecond)}")
+    config_file = opts[:config]
+
+    {:ok, sims} = get_json(config_file)
+    # if length(sims) == 0 do
+    #   exit("No simulations provided in the config")
+    # end
+
+    IO.puts("Configuration:\n" <> inspect(sims))
+
+    # FIXME: Implement processing for multiple simultions
+    sim_config = Enum.at(sims["simulations"], 0)
 
     # Create directory if needed
     File.mkdir_p!(Path.dirname(file))
 
     {:ok, collector_pid} = Saladin.EventCollector.start_link()
 
-    bank_size = 16
-    nbanks = 1
-    ports_per_bank = 2
+    bank_size = sim_config["bank_size"]
+    nbanks = sim_config["nbanks"]
+    ports_per_bank = sim_config["ports_per_bank"]
+    total_consumers = sim_config["total_consumers"]
+    work_cycles = sim_config["work_cycles"]
     arbiter = Saladin.OptimizedArbiterRR
     consumer_module = Saladin.BasicScratchpadReader
+    # arbiter = String.to_existing_atom(sim_config["arbiter_module"])
+    # consumer_module = String.to_existing_atom(sim_config["consumer_module"])
 
     config = %{
       bank_size: bank_size,
       nbanks: nbanks,
       max_value: 65536,
-      total_consumers: 8,
+      total_consumers: total_consumers,
       total_work: bank_size * nbanks,
-      work_cycles: 1,
+      work_cycles: work_cycles,
       ports_per_bank: ports_per_bank,
       consumer_update: get_reader_update(),
       collector: collector_pid
@@ -88,7 +108,7 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
 
     {:ok, emitter_pid} = Saladin.Data.CsvEmitter.start_link(file)
 
-    :ok = Saladin.Data.CsvEmitter.emit(:sim_start, emitter_pid, "This and that")
+    :ok = Saladin.Data.CsvEmitter.emit(:sim_start, emitter_pid, "a:#{sim_config["arbiter_module"]} c:#{total_consumers} w:#{config.total_work} n:#{work_cycles}")
 
     :ok = Saladin.Data.CsvEmitter.emit(:events, emitter_pid, events, EventParser)
 

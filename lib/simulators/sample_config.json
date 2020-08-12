@@ -1,0 +1,11 @@
+{
+	"simulations": [{
+		"bank_size": 16,
+		"nbanks": 1,
+		"ports_per_bank": 2,
+		"total_consumers": 4,
+        "work_cycles": 1,
+        "arbiter_module": "Saladin.OptimizedArbiterRR",
+        "consumer_module": "Saladin.BasicScratchpadReader"
+	}]
+}
