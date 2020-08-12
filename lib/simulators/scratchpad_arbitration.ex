@@ -5,6 +5,25 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
     end
   end
 
+  defmodule EventParser do
+    def parse(events) do
+      Enum.reduce(events, "", fn e, acc ->
+        case e do
+          %Saladin.BasicScratchpadReader.Event{} ->
+            acc <> "c,consumer#{e.consumer_pid},#{e.op},#{e.tick_number}\n"
+
+          %Saladin.OptimizedArbiterRR.Event{} ->
+            acc <>
+              "a,arbiter#{e.arbiter_pid}_#{e.port},consumer#{e.consumer_pid},#{e.tick_number}\n"
+
+          # If the event is unmatched, just ignore it.
+          _ ->
+            acc
+        end
+      end)
+    end
+  end
+
   def main(args \\ []) do
     args
     |> parse_args()
@@ -32,40 +51,39 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
     {update_fun, update_state}
   end
 
-  def get_json(filename) do
+  defp get_json(filename) do
     with {:ok, body} <- File.read(filename), {:ok, json} <- Poison.decode(body), do: {:ok, json}
   end
 
-  defp _main({opts, _}) do
-    IO.puts(:stdio, "#{inspect(opts)}")
+  defp load_module(module_name) do
+    try do
+      String.to_existing_atom("Elixir." <> module_name)
+    rescue
+      ArgumentError ->
+        IO.puts(:stderr, "Module {module_name} cannot be found. Specify an existing module.")
+        exit(:normal)
+    end
+  end
 
-    file = Keyword.get(opts, :file, "data/data-#{:os.system_time(:millisecond)}")
-    config_file = opts[:config]
-
+  defp get_sims(config_file) do
     {:ok, sims} = get_json(config_file)
-    # if length(sims) == 0 do
-    #   exit("No simulations provided in the config")
-    # end
 
-    IO.puts("Configuration:\n" <> inspect(sims))
+    if length(sims["simulations"]) == 0 do
+      IO.puts(:stderr, "No simulations provided in the config. Nothing to do")
+      exit(:normal)
+    else
+      sims["simulations"]
+    end
+  end
 
-    # FIXME: Implement processing for multiple simultions
-    sim_config = Enum.at(sims["simulations"], 0)
-
-    # Create directory if needed
-    File.mkdir_p!(Path.dirname(file))
-
-    {:ok, collector_pid} = Saladin.EventCollector.start_link()
-
+  defp run_simulation(collector_pid, sim_config) do
     bank_size = sim_config["bank_size"]
     nbanks = sim_config["nbanks"]
     ports_per_bank = sim_config["ports_per_bank"]
     total_consumers = sim_config["total_consumers"]
     work_cycles = sim_config["work_cycles"]
-    arbiter = Saladin.OptimizedArbiterRR
-    consumer_module = Saladin.BasicScratchpadReader
-    # arbiter = String.to_existing_atom(sim_config["arbiter_module"])
-    # consumer_module = String.to_existing_atom(sim_config["consumer_module"])
+    arbiter_module = load_module(sim_config["arbiter_module"])
+    consumer_module = load_module(sim_config["consumer_module"])
 
     config = %{
       bank_size: bank_size,
@@ -79,46 +97,40 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
       collector: collector_pid
     }
 
-    finish_time =
-      Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter, consumer_module)
+    Saladin.Sim.ScratchpadArbitration.run_simulation(config, arbiter_module, consumer_module)
+  end
 
-    events = Saladin.EventCollector.get_events(collector_pid)
+  defp _main({opts, _}) do
+    file = Keyword.get(opts, :file, "data/data-#{:os.system_time(:millisecond)}")
+    config_file = opts[:config]
 
-    IO.puts(:stdio, "Finish cycle: #{finish_time}")
+    sims = get_sims(config_file)
 
-    defmodule EventParser do
-      def parse(events) do
-        Enum.reduce(events, "", fn e, acc ->
-          case e do
-            %Saladin.BasicScratchpadReader.Event{} ->
-              acc <> "c,consumer#{e.consumer_pid},#{e.op},#{e.tick_number}\n"
-
-            %Saladin.OptimizedArbiterRR.Event{} ->
-              acc <>
-                "a,arbiter#{e.arbiter_pid}_#{e.port},consumer#{e.consumer_pid},#{e.tick_number}\n"
-
-            # If the event is unmatched, just ignore it.
-            _ ->
-              acc
-          end
-        end)
-      end
-    end
-
+    # Create directory if needed
+    File.mkdir_p!(Path.dirname(file))
+    {:ok, collector_pid} = Saladin.EventCollector.start_link()
     {:ok, emitter_pid} = Saladin.Data.CsvEmitter.start_link(file)
 
-    :ok =
-      Saladin.Data.CsvEmitter.emit(
-        :sim_start,
-        emitter_pid,
-        "a:#{sim_config["arbiter_module"]} c:#{total_consumers} w:#{config.total_work} n:#{
-          work_cycles
-        }"
-      )
+    for sim_config <- sims do
+      finish_time = run_simulation(collector_pid, sim_config)
 
-    :ok = Saladin.Data.CsvEmitter.emit(:events, emitter_pid, events, EventParser)
+      events = Saladin.EventCollector.get_events(collector_pid)
 
-    :ok = Saladin.Data.CsvEmitter.emit(:sim_end, emitter_pid)
+      IO.puts(:stdio, "Finish cycle: #{finish_time}")
+
+      :ok =
+        Saladin.Data.CsvEmitter.emit(
+          :sim_start,
+          emitter_pid,
+          "a:#{sim_config["arbiter_module"]} c:#{sim_config["total_consumers"]} w:#{
+            sim_config["bank_size"] * sim_config["nbanks"]
+          } n:#{sim_config["work_cycles"]}"
+        )
+
+      :ok = Saladin.Data.CsvEmitter.emit(:events, emitter_pid, events, EventParser)
+
+      :ok = Saladin.Data.CsvEmitter.emit(:sim_end, emitter_pid)
+    end
 
     :ok = Saladin.Data.CsvEmitter.stop(emitter_pid)
 
