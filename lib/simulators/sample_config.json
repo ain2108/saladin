@@ -1,24 +1,43 @@
 {
-	"simulations": [{
-		"bank_size": 32,
+	"simulations": [
+    {
+		"bank_size": 16,
 		"nbanks": 1,
-		"ports_per_bank": 2,
-		"total_consumers": 4,
+		"ports_per_bank": 1,
+		"total_consumers": 2,
+        "work_cycles": 1,
+        "arbiter_module": "Saladin.SimpleArbiterRR",
+        "consumer_module": "Saladin.BasicScratchpadReader"
+    },
+    {
+		"bank_size": 16,
+		"nbanks": 1,
+		"ports_per_bank": 1,
+		"total_consumers": 2,
         "work_cycles": 1,
         "arbiter_module": "Saladin.OptimizedArbiterRR",
         "consumer_module": "Saladin.BasicScratchpadReader"
-    }, 
+    },
     {
-		"bank_size": 32,
+		"bank_size": 16,
 		"nbanks": 1,
 		"ports_per_bank": 2,
-		"total_consumers": 4,
-        "work_cycles": 2,
+		"total_consumers": 2,
+        "work_cycles": 1,
         "arbiter_module": "Saladin.OptimizedArbiterRR",
         "consumer_module": "Saladin.BasicScratchpadReader"
     },
     {
-		"bank_size": 32,
+		"bank_size": 16,
+		"nbanks": 1,
+		"ports_per_bank": 2,
+		"total_consumers": 8,
+        "work_cycles": 1,
+        "arbiter_module": "Saladin.OptimizedArbiterRR",
+        "consumer_module": "Saladin.BasicScratchpadReader"
+    },
+    {
+		"bank_size": 16,
 		"nbanks": 1,
 		"ports_per_bank": 2,
 		"total_consumers": 8,
@@ -27,29 +46,11 @@
         "consumer_module": "Saladin.BasicScratchpadReader"
     },
     {
-		"bank_size": 32,
+		"bank_size": 16,
 		"nbanks": 1,
 		"ports_per_bank": 2,
-		"total_consumers": 4,
+		"total_consumers": 8,
         "work_cycles": 3,
-        "arbiter_module": "Saladin.OptimizedArbiterRR",
-        "consumer_module": "Saladin.BasicScratchpadReader"
-    },
-    {
-		"bank_size": 32,
-		"nbanks": 1,
-		"ports_per_bank": 2,
-		"total_consumers": 4,
-        "work_cycles": 4,
-        "arbiter_module": "Saladin.OptimizedArbiterRR",
-        "consumer_module": "Saladin.BasicScratchpadReader"
-    },
-    {
-		"bank_size": 32,
-		"nbanks": 1,
-		"ports_per_bank": 2,
-		"total_consumers": 8,
-        "work_cycles": 4,
         "arbiter_module": "Saladin.OptimizedArbiterRR",
         "consumer_module": "Saladin.BasicScratchpadReader"
     }

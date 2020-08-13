@@ -16,6 +16,10 @@ defmodule Saladin.Simulator.ScratchpadArbitration do
             acc <>
               "a,arbiter#{e.arbiter_pid}_#{e.port},consumer#{e.consumer_pid},#{e.tick_number}\n"
 
+          %Saladin.SimpleArbiterRR.Event{} ->
+            acc <>
+              "a,arbiter#{e.arbiter_pid}_#{0},consumer#{e.consumer_pid},#{e.tick_number}\n"
+
           # If the event is unmatched, just ignore it.
           _ ->
             acc
