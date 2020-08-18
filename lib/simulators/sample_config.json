@@ -1,0 +1,58 @@
+{
+	"simulations": [
+    {
+		"bank_size": 16,
+		"nbanks": 1,
+		"ports_per_bank": 1,
+		"total_consumers": 2,
+        "work_cycles": 1,
+        "arbiter_module": "Saladin.SimpleArbiterRR",
+        "consumer_module": "Saladin.BasicScratchpadReader"
+    },
+    {
+		"bank_size": 16,
+		"nbanks": 1,
+		"ports_per_bank": 1,
+		"total_consumers": 2,
+        "work_cycles": 1,
+        "arbiter_module": "Saladin.OptimizedArbiterRR",
+        "consumer_module": "Saladin.BasicScratchpadReader"
+    },
+    {
+		"bank_size": 16,
+		"nbanks": 1,
+		"ports_per_bank": 2,
+		"total_consumers": 2,
+        "work_cycles": 1,
+        "arbiter_module": "Saladin.OptimizedArbiterRR",
+        "consumer_module": "Saladin.BasicScratchpadReader"
+    },
+    {
+		"bank_size": 16,
+		"nbanks": 1,
+		"ports_per_bank": 2,
+		"total_consumers": 8,
+        "work_cycles": 1,
+        "arbiter_module": "Saladin.OptimizedArbiterRR",
+        "consumer_module": "Saladin.BasicScratchpadReader"
+    },
+    {
+		"bank_size": 16,
+		"nbanks": 1,
+		"ports_per_bank": 2,
+		"total_consumers": 8,
+        "work_cycles": 2,
+        "arbiter_module": "Saladin.OptimizedArbiterRR",
+        "consumer_module": "Saladin.BasicScratchpadReader"
+    },
+    {
+		"bank_size": 16,
+		"nbanks": 1,
+		"ports_per_bank": 2,
+		"total_consumers": 8,
+        "work_cycles": 3,
+        "arbiter_module": "Saladin.OptimizedArbiterRR",
+        "consumer_module": "Saladin.BasicScratchpadReader"
+    }
+]
+}

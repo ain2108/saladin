@@ -1,6 +1,19 @@
 defmodule Saladin.SimpleArbiterRR do
   use Saladin.Module
 
+  defmodule Event do
+    defstruct [:arbiter_pid, :port, :consumer_pid, :tick_number]
+  end
+
+  defp collect_event(state, consumer_pid) do
+    collect(state, %Saladin.SimpleArbiterRR.Event{
+      arbiter_pid: self(),
+      port: 0,
+      consumer_pid: consumer_pid,
+      tick_number: state.tick_number
+    })
+  end
+
   defp wait_consumer_registration(state, cur, num_consumers) do
     # Register consumers
     if cur < num_consumers do
@@ -55,30 +68,27 @@ defmodule Saladin.SimpleArbiterRR do
         {:read, addr, pid, req_tick_number}
         when req_tick_number < tick_number and pid == cur_consumer ->
           # clock cycle to read from PLM
+
+          collect_event(state, pid)
           state = wait(state)
           [{_, value}] = :ets.lookup(state.plm, addr)
 
           # Produce the output, only should become visible to consumer next clock cycle
+          collect_event(state, pid)
           Saladin.Module.Input.drive(pid, {:read_done, addr, value, state.tick_number + 1})
           # clock cycle spent writing into output register
-          state = wait(state)
-
-          # Output signal driven by the output register
-          state
+          wait(state)
 
         {:write, addr, value, pid, req_tick_number}
         when req_tick_number < tick_number and pid == cur_consumer ->
-          # IO.puts("write: #{addr}:#{value} from #{req_tick_number} executed at #{tick_number}")
+          collect_event(state, pid)
           :ets.insert(state.plm, {addr, value})
           state = wait(state)
 
           # Produce the output, only should become visible to consumer next clock cycle
           Saladin.Module.Input.drive(pid, {:write_done, addr, value, state.tick_number + 1})
-          # clock cycle spent writing into output register
-          state = wait(state)
-
-          # IO.puts("write: returning to request register: #{addr}:#{value} at #{state.tick_number}")
-          state
+          collect_event(state, pid)
+          wait(state)
       after
         # If no valid request, need to wait a clock cycle anyways
         0 -> wait(state)

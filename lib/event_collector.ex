@@ -49,9 +49,15 @@ defmodule Saladin.EventCollector do
   def run(events) do
     events =
       receive do
-        {:event, event} -> [event | events]
-        {:stop, src_pid} -> do_stop(src_pid)
-        {:get_events, src_pid} -> send(src_pid, {:events, events})
+        {:event, event} ->
+          [event | events]
+
+        {:stop, src_pid} ->
+          do_stop(src_pid)
+
+        {:get_events, src_pid} ->
+          send(src_pid, {:events, events})
+          []
       end
 
     run(events)
