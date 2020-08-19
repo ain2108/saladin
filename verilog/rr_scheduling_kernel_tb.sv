@@ -1,18 +1,9 @@
+`include "utils.sv"
+
 module rr_scheduling_kernel_tb;
 
   /* Make a reset that pulses once. */
   reg reset = 0;
-  initial begin
-    $dumpfile("test.vcd");
-    $dumpvars(0,rr_scheduling_kernel_tb);
-
-    # 17 reset = 1;
-    # 11 reset = 0;
-    # 29 reset = 1;
-    # 11 reset = 0;
-    # 100 $stop;
-  end
-
   /* Make a regular pulsing clock. */
   reg clk = 0;
   always #5 clk = !clk;
@@ -47,4 +38,24 @@ module rr_scheduling_kernel_tb;
 
   initial
     $monitor("At time %t, value = %h (%0d)", $time, value, value);
+  
+  initial begin
+    $dumpfile("test.vcd");
+    $dumpvars(0,rr_scheduling_kernel_tb);
+    
+    # 5
+    reset = 1;
+    # 15
+    reset = 0;
+
+    # 5
+    `assert(value, 0)
+    # 5
+    `assert(value, 1)
+    # 5
+
+
+    # 100 $stop;
+  
+  end
 endmodule // test

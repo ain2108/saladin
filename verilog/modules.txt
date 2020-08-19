@@ -1,3 +1,4 @@
-rr_scheduling_kernel.v
-rr_scheduling_kernel_tb.v
-memory.v
+rr_scheduling_kernel_tb.sv
+rr_scheduling_kernel.sv
+memory.sv
+utils.sv
