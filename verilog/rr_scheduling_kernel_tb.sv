@@ -6,6 +6,7 @@ module rr_scheduling_kernel_tb;
   reg reset = 0;
   /* Make a regular pulsing clock. */
   reg clk = 0;
+  reg hello = 0;
   always #5 clk = !clk;
 
   parameter COUNTER_WIDTH = 8;
@@ -13,13 +14,15 @@ module rr_scheduling_kernel_tb;
   parameter VALUE_WIDTH = 8;
   parameter NCONSUMERS = 2;
   parameter NBANKS = 1;
-  parameter NPORTS = 1;
+  parameter NPORTS = 2;
 
-  parameter REQ_WIDTH = ADDR_WIDTH + VALUE_WIDTH + 1;
+  localparam REQ_WIDTH = ADDR_WIDTH + VALUE_WIDTH + 1 + 1;
+  localparam PLM_INPUT_WIDTH = (ADDR_WIDTH >> $clog2(NBANKS)) + VALUE_WIDTH + 1;
+  localparam NKERNELS = NBANKS * NPORTS;
 
-  wire [COUNTER_WIDTH - 1:0] value;
 
   reg [REQ_WIDTH - 1:0] requests [NCONSUMERS];
+  wire [PLM_INPUT_WIDTH - 1:0] value [NKERNELS];
   
   initial begin
     requests[0][REQ_WIDTH-1:0] = 0;
@@ -27,21 +30,32 @@ module rr_scheduling_kernel_tb;
   end
 
   rr_scheduling_kernel #(
-    .WIDTH(8),
     .ADDR_WIDTH(ADDR_WIDTH),
     .VALUE_WIDTH(VALUE_WIDTH),
     .NCONSUMERS(NCONSUMERS),
     .NBANKS(NBANKS),
     .NPORTS(NPORTS)
   )
-  c1 (value, requests, clk, reset);
+  c1 (
+    .out(value),
+    .requests(requests),
+    .clk(clk),
+    .reset(reset));
 
-  initial
-    $monitor("At time %t, value = %h (%0d)", $time, value, value);
-  
+  initial begin
+    $monitor("At time %t, value = %h (%0d)", $time, value[0], value[0]);
+  end
+
+  integer i = 0;
   initial begin
     $dumpfile("test.vcd");
-    $dumpvars(0,rr_scheduling_kernel_tb);
+    $dumpvars;
+    for (i = 0; i < NKERNELS; i++) begin
+      $dumpvars(0, value[i]);
+    end
+  end
+  
+  initial begin
     
     # 5
     reset = 1;
@@ -49,11 +63,11 @@ module rr_scheduling_kernel_tb;
     reset = 0;
 
     # 5
-    `assert(value, 0)
+    // `assert(value[0], 0)
     # 5
-    `assert(value, 1)
+    // `assert(value[0], 1)
+    $display("%h", value[0]);
     # 5
-
 
     # 100 $stop;
   

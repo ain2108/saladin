@@ -1,8 +1,9 @@
 module memory #(
-    parameter DATA = 72,
-    parameter ADDR = 10
+    parameter DATA = 8,
+    parameter ADDR = 4
 ) (
     input   wire                clk,
+    input   wire                rst_n,
     
     // Port A
     input   wire                a_wr,
