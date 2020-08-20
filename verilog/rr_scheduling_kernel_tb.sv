@@ -24,9 +24,11 @@ module rr_scheduling_kernel_tb;
   reg [REQ_WIDTH - 1:0] requests [NCONSUMERS];
   wire [PLM_INPUT_WIDTH - 1:0] value [NKERNELS];
   
+  integer j = 0;
   initial begin
-    requests[0][REQ_WIDTH-1:0] = 0;
-    requests[1][REQ_WIDTH-1:0] = 0;
+    for (j =0; j < NKERNELS; j++) begin
+      requests[j]= 0;
+    end
   end
 
   rr_scheduling_kernel #(
