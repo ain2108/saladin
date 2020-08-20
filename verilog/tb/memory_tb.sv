@@ -1,7 +1,8 @@
 
+
 `default_nettype none
 
-module tb_memory;
+module memory_tb;
 reg clk;
 reg rst_n;
 
@@ -36,7 +37,7 @@ localparam CLK_PERIOD = 10;
 always #(CLK_PERIOD/2) clk=~clk;
 
 initial begin
-    $dumpfile("tb_memory.vcd");
+    $dumpfile("memory_tb.vcd");
     $dumpvars(0, tb_memory);
 end
 
