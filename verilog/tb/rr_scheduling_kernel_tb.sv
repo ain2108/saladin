@@ -13,8 +13,8 @@ module rr_scheduling_kernel_tb;
   parameter COUNTER_WIDTH = 8;
   parameter ADDR_WIDTH = 4;
   parameter VALUE_WIDTH = 8;
-  parameter NCONSUMERS = 2;
-  parameter NBANKS = 1;
+  parameter NCONSUMERS = 8;
+  parameter NBANKS = 4;
   parameter NPORTS = 2;
 
   localparam REQ_WIDTH = ADDR_WIDTH + VALUE_WIDTH + 1 + 1;
@@ -22,8 +22,8 @@ module rr_scheduling_kernel_tb;
   localparam NKERNELS = NBANKS * NPORTS;
 
 
-  reg [REQ_WIDTH - 1:0] requests [NCONSUMERS-1:0];
-  wire [PLM_INPUT_WIDTH - 1:0] value [NKERNELS-1:0];
+  reg [REQ_WIDTH - 1:0] requests [NCONSUMERS];
+  wire [PLM_INPUT_WIDTH - 1:0] value [NKERNELS];
   
   integer j = 0;
   initial begin
@@ -53,8 +53,13 @@ module rr_scheduling_kernel_tb;
   initial begin
     $dumpfile("test.vcd");
     $dumpvars;
+    // for (i = 0; i < NKERNELS; i++) begin
+    //   $dumpvars(0, value[i]);
+    //   $dumpvars(0, c1.rr_pivots[i]);
+    // end
+    
     for (i = 0; i < NKERNELS; i++) begin
-      $dumpvars(0, value[i]);
+      $dumpvars(0, c1.rr_pivots[i]);
     end
   end
   
@@ -72,7 +77,7 @@ module rr_scheduling_kernel_tb;
     $display("%h", value[0]);
     # 5
 
-    # 100 $stop;
+    # 100 $finish;
   
   end
 endmodule // test

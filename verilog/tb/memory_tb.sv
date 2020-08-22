@@ -38,10 +38,10 @@ memory #(.ADDR(ADDR), .DATA(DATA)) dut
 localparam CLK_PERIOD = 10;
 always #(CLK_PERIOD/2) clk=~clk;
 
-initial begin
-    $dumpfile("memory_tb.vcd");
-    $dumpvars(0, memory_tb);
-end
+// initial begin
+//     $dumpfile("memory_tb.vcd");
+//     $dumpvars(0, memory_tb);
+// end
 
 
 initial begin
@@ -51,6 +51,7 @@ initial begin
     repeat(5) @(posedge clk);
     rst_n<=1;
     
+    $write("================== TEST memory_tb ==================\n");
     $write("TEST: basic write/read .... ");
     @(posedge clk); 
 
@@ -96,6 +97,7 @@ initial begin
     `assert(t_b_dout, 1)
     $write("PASS\n");
     
+    $write("\n");
     repeat(2) @(posedge clk);
     $finish(2);
 end

@@ -11,12 +11,16 @@ sim:
 	/Applications/gtkwave.app/Contents/Resources/bin/gtkwave test.vcd
 
 test:
-	iverilog -g2005-sv -o memory_sim -c modules.txt -s memory_tb
-	echo "finish" | vvp memory_sim -lxt2
-	rm memory_sim
-
+	iverilog -g2005-sv -o test_sim tb/memory_tb.sv 
+	vvp test_sim -lxt2
+	rm test_sim
+	
+	iverilog -g2005-sv -o test_sim tb/pivots_rr_scheduling_kernel_tb.sv
+	vvp test_sim -lxt2
+	rm test_sim
 
 clean:
-	rm sim
-	rm test.vcd
-	rm memory_sim
+	rm -f sim
+	rm -f test.vcd
+	rm -f memory_sim
+	rm -f memory_tb.vcd
