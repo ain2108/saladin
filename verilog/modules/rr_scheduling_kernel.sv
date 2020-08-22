@@ -5,8 +5,8 @@ module rr_scheduling_kernel #(
   parameter NBANKS = 1,
   parameter NPORTS = 1)
   (
-  output reg [PLM_INPUT_WIDTH-1:0] out [NKERNELS], 
-  input [REQ_WIDTH-1:0] requests [NCONSUMERS],
+  output reg [PLM_INPUT_WIDTH-1:0] out [NKERNELS-1:0], 
+  input [REQ_WIDTH-1:0] requests [NCONSUMERS-1:0],
   input clk, 
   input reset);
 

@@ -31,5 +31,9 @@ module memory #(
             b_dout      <= b_din;
             mem[b_addr] <= b_din;
         end
+        if (b_wr == 1 && a_wr == 1 && a_addr == b_addr) begin
+            $display("conflicting write on addr: %h", a_addr);
+            $finish;
+        end
     end
 endmodule

@@ -22,8 +22,8 @@ module rr_scheduling_kernel_tb;
   localparam NKERNELS = NBANKS * NPORTS;
 
 
-  reg [REQ_WIDTH - 1:0] requests [NCONSUMERS];
-  wire [PLM_INPUT_WIDTH - 1:0] value [NKERNELS];
+  reg [REQ_WIDTH - 1:0] requests [NCONSUMERS-1:0];
+  wire [PLM_INPUT_WIDTH - 1:0] value [NKERNELS-1:0];
   
   integer j = 0;
   initial begin
