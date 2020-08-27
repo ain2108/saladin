@@ -45,6 +45,8 @@ module rr_scheduling_kernel #(
     end
   endgenerate
 
+  wire [NKERNELS-1:0] _debug_kernel_statuses;
+
 
   /* rr_pivots control */
   genvar g_port_i;
@@ -55,6 +57,8 @@ module rr_scheduling_kernel #(
 		for (g_bank_i = 0; g_bank_i < NBANKS; g_bank_i = g_bank_i + 1) begin
       for (g_port_i = 0; g_port_i < NPORTS; g_port_i = g_port_i + 1) begin
 
+        localparam K_ID = g_bank_i * NPORTS + g_port_i; /* ID of the scheduling kernel */
+
         /* Determine validity of the candidate that the pivot is pointing to */
         wire [REQ_WIDTH-1:0] lead_candidate; /* Bits of the request that pivot is pointing to */
         wire [NUM_BANK_BITS-1:0] bank_address; /* Address bit of the said candidate */
@@ -62,27 +66,29 @@ module rr_scheduling_kernel #(
         wire is_valid_bit; /* Is the candidate valid bit set? */
         wire is_eligible_request; /* Is this a request eligible for scheduling? */
 
-        assign lead_candidate = requests[rr_pivots[g_bank_i * NPORTS + g_port_i]];
+        assign lead_candidate = requests[rr_pivots[K_ID]];
         assign bank_address = lead_candidate[REQ_WIDTH-1:REQ_WIDTH-NUM_BANK_BITS-1];
 
         assign is_candidate_addr_in_range = (bank_address == g_bank_i);
         assign is_valid_bit = lead_candidate[0];
         assign is_eligible_request = is_candidate_addr_in_range && is_valid_bit;
 
-        assign plm_inputs[g_bank_i * NPORTS + g_port_i] = (is_eligible_request) ? 
+        assign plm_inputs[K_ID] = (is_eligible_request) ? 
           lead_candidate[REQ_WIDTH-1:1] /* not including request valid bit */
           : 0; /* All 0s is wr=0, this its a resource read */
+
+        assign _debug_kernel_statuses[K_ID] = is_eligible_request;
 
         always @(posedge clk or posedge reset) begin
           if (reset) begin
 
             /* Maximize the spread of pivots */
-            rr_pivots[g_bank_i * NPORTS + g_port_i] = g_bank_i + g_port_i * PIVOT_DIFF;
+            rr_pivots[K_ID] = g_bank_i + g_port_i * PIVOT_DIFF;
 
           end else begin
 
             /* Progress the pivot up, rely on wrapping */
-            rr_pivots[g_bank_i * NPORTS + g_port_i] = rr_pivots[g_bank_i * NPORTS + g_port_i] + 1;
+            rr_pivots[K_ID] = rr_pivots[K_ID] + 1;
 
             /* Tell the response logic how to route the PLM output */
           end
