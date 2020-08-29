@@ -4,7 +4,7 @@
 
 `default_nettype none
 
-module pivots_rr_scheduling_kernel_tb;
+module test_pivots_rr_scheduling_kernel_tb;
     
     parameter NCONSUMERS = 8;
     parameter NBANKS = 4;
@@ -15,7 +15,13 @@ module pivots_rr_scheduling_kernel_tb;
     reg rst;
 
     localparam CLK_PERIOD = 10;
-    always #(CLK_PERIOD/2) clk=~clk;
+    initial begin
+        clk = 1'b0;
+        rst = 1'b1;
+        repeat(4) #(CLK_PERIOD/2) clk = ~clk;
+        rst = 1'b0;
+        forever #(CLK_PERIOD/2) clk = ~clk; // generate a clock
+    end
 
     rr_scheduling_kernel #(
         .NCONSUMERS(NCONSUMERS),
@@ -26,18 +32,14 @@ module pivots_rr_scheduling_kernel_tb;
         .reset(rst));
 
     initial begin
-        #1 rst<=1'bx;clk<=1'bx;
-        #(CLK_PERIOD*3) rst<=1;
-        #(CLK_PERIOD*3) rst<=0;clk<=0;
-        repeat(5) @(posedge clk);
-
+        @(negedge rst); // wait for reset
 
         $write("================== TEST pivots ==================\n");
         $write("TEST: reset initializes pivots correctly .... ");
-
         @(posedge clk);
         rst <= 1;
         @(posedge clk);
+
         @(posedge clk);
         `assert(rsk.rr_pivots[0], 0);
         `assert(rsk.rr_pivots[1], 4);

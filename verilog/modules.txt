@@ -1,4 +1,5 @@
 tb/rr_scheduling_kernel_tb.sv
+tb/memory_tb.sv
 
 // Look at get_cmd_file() in source to fix the missing \n issue. line. 1371 in driver/main.c
 // Here is the lexer: https://github.com/steveicarus/iverilog/blob/8e4593bf909246fd8603a99bdda7ee964fdbdd17/driver/cflexor.lex#L157

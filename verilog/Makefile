@@ -15,7 +15,15 @@ test:
 	vvp test_sim -lxt2
 	rm test_sim
 	
-	iverilog -g2005-sv -o test_sim tb/pivots_rr_scheduling_kernel_tb.sv
+	iverilog -g2005-sv -o test_sim tb/test_pivots_rr_scheduling_kernel_tb.sv
+	vvp test_sim -lxt2
+	rm test_sim
+	
+	iverilog -g2005-sv -o test_sim tb/test_request_selection_rr_scheduling_kernel_tb.sv
+	vvp test_sim -lxt2
+	rm test_sim
+	
+	iverilog -g2005-sv -o test_sim tb/test_request_mux_tb.sv
 	vvp test_sim -lxt2
 	rm test_sim
 
