@@ -1,9 +1,6 @@
-`include "modules/request_mux.sv"
-`include "utils/utils.sv"
-
 `default_nettype none
 
-module test_request_mux;
+module test_request_mux_tb;
     
     reg clk;
     reg rst;

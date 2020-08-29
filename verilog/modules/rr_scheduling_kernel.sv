@@ -1,5 +1,3 @@
-`include "utils/utils.sv"
-
 
 module rr_scheduling_kernel #(
   parameter ADDR_WIDTH = 4,

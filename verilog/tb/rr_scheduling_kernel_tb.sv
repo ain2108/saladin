@@ -1,6 +1,3 @@
-`include "utils/utils.sv"
-`include "modules/rr_scheduling_kernel.sv"
-
 module rr_scheduling_kernel_tb;
 
   /* Make a reset that pulses once. */

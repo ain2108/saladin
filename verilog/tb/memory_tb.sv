@@ -1,7 +1,4 @@
 
-`include "modules/memory.sv"
-`include "utils/utils.sv"
-
 `default_nettype none
 
 module memory_tb;

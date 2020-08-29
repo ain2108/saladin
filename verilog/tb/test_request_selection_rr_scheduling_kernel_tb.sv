@@ -1,6 +1,4 @@
 
-`include "utils/utils.sv"
-`include "modules/rr_scheduling_kernel.sv"
 
 `default_nettype none
 

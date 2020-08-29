@@ -11,19 +11,19 @@ sim:
 	/Applications/gtkwave.app/Contents/Resources/bin/gtkwave test.vcd
 
 test:
-	iverilog -g2005-sv -o test_sim tb/memory_tb.sv 
+	iverilog -g2005-sv -o test_sim -c modules.txt -s memory_tb
 	vvp test_sim -lxt2
 	rm test_sim
 	
-	iverilog -g2005-sv -o test_sim tb/test_pivots_rr_scheduling_kernel_tb.sv
+	iverilog -g2005-sv -o test_sim -c modules.txt -s test_pivots_rr_scheduling_kernel_tb
 	vvp test_sim -lxt2
 	rm test_sim
 	
-	iverilog -g2005-sv -o test_sim tb/test_request_selection_rr_scheduling_kernel_tb.sv
+	iverilog -g2005-sv -o test_sim -c modules.txt -s test_request_selection_rr_scheduling_kernel_tb
 	vvp test_sim -lxt2
 	rm test_sim
 	
-	iverilog -g2005-sv -o test_sim tb/test_request_mux_tb.sv
+	iverilog -g2005-sv -o test_sim -c modules.txt -s test_request_mux_tb
 	vvp test_sim -lxt2
 	rm test_sim
 
