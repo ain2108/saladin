@@ -8,7 +8,7 @@ module rr_scheduling_kernel #(
   (
   output reg [PLM_INPUT_WIDTH-1:0] out [NKERNELS], 
   output [PLM_INPUT_WIDTH-1:0] plm_inputs [NKERNELS], 
-  output [PLM_OUTPUT_WIDTH-1:0] plm_outputs [NKERNELS], 
+  input [PLM_OUTPUT_WIDTH-1:0] plm_outputs [NKERNELS], 
   input [REQ_WIDTH-1:0] requests [NCONSUMERS], 
   input clk, 
   input reset);
@@ -60,12 +60,16 @@ module rr_scheduling_kernel #(
 
         /* Determine validity of the candidate that the pivot is pointing to */
         wire [REQ_WIDTH-1:0] lead_candidate; /* Bits of the request that pivot is pointing to */
+        wire [$clog2(NCONSUMERS)-1:0] sel_candidate; /* Candidate select */
         wire [NUM_BANK_BITS-1:0] bank_address; /* Address bit of the said candidate */
         wire is_candidate_addr_in_range; /* Is the address in range of the bank? */
         wire is_valid_bit; /* Is the candidate valid bit set? */
         wire is_eligible_request; /* Is this a request eligible for scheduling? */
 
-        assign lead_candidate = requests[rr_pivots[K_ID]];
+        assign sel_candidate = rr_pivots[K_ID];
+        request_mux #( .REQ_WIDTH(REQ_WIDTH), .REQ_NUMBER(NCONSUMERS)) req_mux (
+          .requests(requests), .select(sel_candidate), .selected_request(lead_candidate));
+
         assign bank_address = lead_candidate[REQ_WIDTH-1:REQ_WIDTH-NUM_BANK_BITS-1];
 
         assign is_candidate_addr_in_range = (bank_address == g_bank_i);
@@ -96,4 +100,4 @@ module rr_scheduling_kernel #(
     end
   endgenerate
 
-endmodule // counter
+endmodule
