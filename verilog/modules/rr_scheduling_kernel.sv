@@ -70,7 +70,7 @@ module rr_scheduling_kernel #(
         request_mux #( .REQ_WIDTH(REQ_WIDTH), .REQ_NUMBER(NCONSUMERS)) req_mux (
           .requests(requests), .select(sel_candidate), .selected_request(lead_candidate));
 
-        assign bank_address = lead_candidate[REQ_WIDTH-1:REQ_WIDTH-NUM_BANK_BITS-1];
+        assign bank_address = lead_candidate[REQ_WIDTH-1:REQ_WIDTH-NUM_BANK_BITS];
 
         assign is_candidate_addr_in_range = (bank_address == g_bank_i);
         assign is_valid_bit = lead_candidate[0];

@@ -252,9 +252,9 @@ module test_request_selection_rr_scheduling_kernel_tb;
         @(posedge clk);
         rst = 1'b0;
         requests[0] = {ADDR_WIDTH'(255), VALUE_WIDTH'(0), 1'b1, 1'b1};
-        requests[1] = {ADDR_WIDTH'(511), VALUE_WIDTH'(1), 1'b1, 1'b1};
-        requests[2] = {ADDR_WIDTH'(767), VALUE_WIDTH'(2), 1'b1, 1'b1};
-        requests[3] = {ADDR_WIDTH'(1023), VALUE_WIDTH'(3), 1'b1, 1'b1};
+        requests[1] = {ADDR_WIDTH'(510), VALUE_WIDTH'(1), 1'b1, 1'b1};
+        requests[2] = {ADDR_WIDTH'(765), VALUE_WIDTH'(2), 1'b1, 1'b1};
+        requests[3] = {ADDR_WIDTH'(1020), VALUE_WIDTH'(3), 1'b1, 1'b1};
         requests[4] = {ADDR_WIDTH'(0), VALUE_WIDTH'(0), 1'b0, 1'b0};
         
         @(posedge clk); // pivot 1-5
@@ -265,17 +265,16 @@ module test_request_selection_rr_scheduling_kernel_tb;
         @(posedge clk); // pivot 6-2
         @(posedge clk); // pivot 7-3
         @(posedge clk); // pivot 0-4
-        repeat(20) @(posedge clk);
         `assert(plm_0_addr, ADDR_WIDTH'(255));
         `assert(plm_0_val, ADDR_WIDTH'(0));
         `assert(plm_0_wr, ADDR_WIDTH'(1));
-        `assert(plm_2_addr, ADDR_WIDTH'(255));
+        `assert(plm_2_addr, ADDR_WIDTH'(254));
         `assert(plm_2_val, ADDR_WIDTH'(1));
         `assert(plm_2_wr, ADDR_WIDTH'(1));
-        `assert(plm_4_addr, ADDR_WIDTH'(255));
+        `assert(plm_4_addr, ADDR_WIDTH'(253));
         `assert(plm_4_val, ADDR_WIDTH'(2));
         `assert(plm_4_wr, ADDR_WIDTH'(1));
-        `assert(plm_6_addr, ADDR_WIDTH'(255));
+        `assert(plm_6_addr, ADDR_WIDTH'(252));
         `assert(plm_6_val, ADDR_WIDTH'(3));
         `assert(plm_6_wr, ADDR_WIDTH'(1));
         @(posedge clk); // pivot 1-5
