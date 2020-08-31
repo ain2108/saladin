@@ -36,6 +36,8 @@ module rr_scheduling_kernel #(
           bank_1_port_1
   */
   reg [$clog2(NCONSUMERS)-1:0] rr_pivots [NKERNELS];
+  reg [$clog2(NCONSUMERS)-1:0] rr_response_pivots [NKERNELS];
+  reg [$clog2(NCONSUMERS)-1:0] rr_response_valid_bits [NKERNELS];
   
   genvar j;
   generate
@@ -56,6 +58,7 @@ module rr_scheduling_kernel #(
 		for (g_bank_i = 0; g_bank_i < NBANKS; g_bank_i = g_bank_i + 1) begin
       for (g_port_i = 0; g_port_i < NPORTS; g_port_i = g_port_i + 1) begin
 
+        /****************************** REQUEST ROUTING ******************************/
         localparam K_ID = g_bank_i * NPORTS + g_port_i; /* ID of the scheduling kernel */
 
         /* Determine validity of the candidate that the pivot is pointing to */
@@ -81,19 +84,28 @@ module rr_scheduling_kernel #(
           : 0; /* All 0s is wr=0, this its a resource read */
 
         assign _debug_kernel_statuses[K_ID] = is_eligible_request;
+        
+        /****************************** RESPONSE ROUTING ******************************/
 
+        /****************************** PIVOT UPDATE ******************************/
         always @(posedge clk or posedge reset) begin
+
+          /* Tell the response logic that next cycle will have a response */
+          rr_response_valid_bits[K_ID] <= is_eligible_request;
+
           if (reset) begin
 
             /* Maximize the spread of pivots */
-            rr_pivots[K_ID] = g_bank_i + g_port_i * PIVOT_DIFF;
+            rr_pivots[K_ID] <= g_bank_i + g_port_i * PIVOT_DIFF;
 
           end else begin
 
             /* Progress the pivot up, rely on wrapping */
-            rr_pivots[K_ID] = rr_pivots[K_ID] + 1;
-
+            rr_pivots[K_ID] <= rr_pivots[K_ID] + 1;
+            
             /* Tell the response logic how to route the PLM output */
+            rr_response_pivots[K_ID] <= rr_pivots[K_ID];
+
           end
         end
       end
