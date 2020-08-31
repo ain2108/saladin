@@ -89,23 +89,20 @@ module rr_scheduling_kernel #(
 
         /****************************** PIVOT UPDATE ******************************/
         always @(posedge clk or posedge reset) begin
+          
+          /* Progress the pivot up, rely on wrapping */
+          rr_pivots[K_ID] <= rr_pivots[K_ID] + 1;
 
           /* Tell the response logic that next cycle will have a response */
           rr_response_valid_bits[K_ID] <= is_eligible_request;
+          
+          /* Tell the response logic how to route the PLM output */
+          rr_response_pivots[K_ID] <= rr_pivots[K_ID];
 
           if (reset) begin
-
             /* Maximize the spread of pivots */
             rr_pivots[K_ID] <= g_bank_i + g_port_i * PIVOT_DIFF;
-
-          end else begin
-
-            /* Progress the pivot up, rely on wrapping */
-            rr_pivots[K_ID] <= rr_pivots[K_ID] + 1;
-            
-            /* Tell the response logic how to route the PLM output */
-            rr_response_pivots[K_ID] <= rr_pivots[K_ID];
-
+            rr_response_valid_bits[K_ID] <= 1'b0;
           end
         end
       end
