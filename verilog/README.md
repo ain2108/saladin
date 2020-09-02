@@ -25,14 +25,19 @@ sudo cp /usr/local/Cellar/perl/5.*/lib/perl5/site_perl/5.*/Switch.pm /Library/Pe
 
 ### Run Testbench
 
+Run unit tests:
+```bash
+make test
+```
+
 Compile SystemVerilog:
 ```bash
-iverilog -g2005-sv -o ras_kernel -c modules.txt -s rr_scheduling_kernel_tb
+iverilog -g2005-sv -o sim -c modules.txt -s <module_name>
 ```
 
 Run the simulation:
 ```bash
-vvp ras_kernel -lxt2
+vvp sim -lxt2
 ```
 
 See the waveforms:

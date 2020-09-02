@@ -6,14 +6,17 @@ module rr_scheduling_kernel #(
   parameter NBANKS = 1,
   parameter NPORTS = 1)
   (
-  output reg [PLM_INPUT_WIDTH-1:0] out [NKERNELS], 
+  input [REQ_WIDTH-1:0] requests [NCONSUMERS], 
   output [PLM_INPUT_WIDTH-1:0] plm_inputs [NKERNELS], 
   input [PLM_OUTPUT_WIDTH-1:0] plm_outputs [NKERNELS], 
-  input [REQ_WIDTH-1:0] requests [NCONSUMERS], 
+  output reg [PLM_INPUT_WIDTH-1:0] out [NKERNELS],
+  output [RES_WIDTH-1:0] responses [NCONSUMERS], 
+
   input clk, 
   input reset);
 
   localparam REQ_WIDTH = ADDR_WIDTH + VALUE_WIDTH + 1 + 1; /* addr, value, wr, valid */
+  localparam RES_WIDTH = PLM_OUTPUT_WIDTH + 1; /* value, valid */
   localparam NUM_BANK_BITS = $clog2(NBANKS);
   localparam PLM_INPUT_WIDTH = (ADDR_WIDTH - NUM_BANK_BITS) + VALUE_WIDTH + 1;
   localparam PLM_OUTPUT_WIDTH = VALUE_WIDTH;
@@ -36,19 +39,12 @@ module rr_scheduling_kernel #(
           bank_1_port_1
   */
   reg [$clog2(NCONSUMERS)-1:0] rr_pivots [NKERNELS];
-  reg [$clog2(NCONSUMERS)-1:0] rr_response_pivots [NKERNELS];
-  reg [$clog2(NCONSUMERS)-1:0] rr_response_valid_bits [NKERNELS];
+  reg rr_response_valid_bits [NKERNELS];
   
-  genvar j;
-  generate
-		for (j = 0; j < NKERNELS; j = j + 1) begin
-      assign out[j] = j;
-    end
-  endgenerate
-
-  wire [NKERNELS-1:0] _debug_kernel_statuses;
-
-
+  reg [$clog2(NCONSUMERS)-1:0] rr_response_pivots [NKERNELS];
+  
+  wire [PLM_OUTPUT_WIDTH-1+1:0] augumented_plm_outputs[NKERNELS];
+  
   /* rr_pivots control */
   genvar g_port_i;
   genvar g_bank_i;
@@ -57,9 +53,9 @@ module rr_scheduling_kernel #(
     /* There is a rr_pivot register for each port of each bank */
 		for (g_bank_i = 0; g_bank_i < NBANKS; g_bank_i = g_bank_i + 1) begin
       for (g_port_i = 0; g_port_i < NPORTS; g_port_i = g_port_i + 1) begin
+        localparam K_ID = g_bank_i * NPORTS + g_port_i; /* ID of the scheduling kernel */
 
         /****************************** REQUEST ROUTING ******************************/
-        localparam K_ID = g_bank_i * NPORTS + g_port_i; /* ID of the scheduling kernel */
 
         /* Determine validity of the candidate that the pivot is pointing to */
         wire [REQ_WIDTH-1:0] lead_candidate; /* Bits of the request that pivot is pointing to */
@@ -82,10 +78,11 @@ module rr_scheduling_kernel #(
         assign plm_inputs[K_ID] = (is_eligible_request) ? 
           lead_candidate[REQ_WIDTH-1:1] /* not including request valid bit */
           : 0; /* All 0s is wr=0, this its a resource read */
-
-        assign _debug_kernel_statuses[K_ID] = is_eligible_request;
         
-        /****************************** RESPONSE ROUTING ******************************/
+        /****************************** PLM OUTPUT AUGUMENTATION ******************************/
+
+        /* Need to augument the outputs with the validity bits */
+        assign augumented_plm_outputs[K_ID] = {plm_outputs[K_ID], rr_response_valid_bits[K_ID]};
 
         /****************************** PIVOT UPDATE ******************************/
         always @(posedge clk or posedge reset) begin
@@ -93,10 +90,8 @@ module rr_scheduling_kernel #(
           /* Progress the pivot up, rely on wrapping */
           rr_pivots[K_ID] <= rr_pivots[K_ID] + 1;
 
-          /* Tell the response logic that next cycle will have a response */
+          /* Tell the response logic for what consumer is the request being served */
           rr_response_valid_bits[K_ID] <= is_eligible_request;
-          
-          /* Tell the response logic how to route the PLM output */
           rr_response_pivots[K_ID] <= rr_pivots[K_ID];
 
           if (reset) begin
@@ -106,6 +101,30 @@ module rr_scheduling_kernel #(
           end
         end
       end
+    end
+  endgenerate
+
+  /****************************** RESPONSE ROUTING ******************************/
+
+  genvar consumer_id;
+  generate
+    for(consumer_id = 0; consumer_id < NCONSUMERS; consumer_id = consumer_id + 1) begin
+
+      wire [RES_WIDTH-1:0] selected_response;
+      
+      response_mux #(
+        .RES_WIDTH(RES_WIDTH),
+        .NKERNELS(NKERNELS),
+        .NCONSUMERS(NCONSUMERS),
+        .C_ID(consumer_id)
+      ) res_mux (
+        .augumented_plm_outputs(augumented_plm_outputs),
+        .response_pivots(rr_response_pivots),
+        .selected_response(selected_response)
+      );
+
+      assign responses[consumer_id] = selected_response;
+
     end
   endgenerate
 
